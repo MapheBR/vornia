@@ -1,0 +1,11 @@
+# Normaliza fim de linha por tipo de arquivo.
+#
+# Scripts de shell e SQL sao consumidos por Linux (container do Postgres e
+# git hooks). Um checkout no Windows sem esta regra grava CRLF e o script
+# falha com "bad interpreter" ou erro de sintaxe dentro do container.
+* text=auto
+
+*.sh text eol=lf
+*.sql text eol=lf
+.githooks/* text eol=lf
+Dockerfile text eol=lf

@@ -118,7 +118,7 @@ def upgrade() -> None:
     # Apenas DELETE: o uso de employees passa a ser via app;
     # vorestia_auth tambem e sujeito a RLS forçado, mas precisa de DELETE
     # para o cleanup da suíte de testes (tests/integration/conftest.py).
-    op.execute("GRANT DELETE ON employees TO vornia;")
+    op.execute("GRANT DELETE ON employees TO vornia_auth;")
 
 
 def downgrade() -> None:

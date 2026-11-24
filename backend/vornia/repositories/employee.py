@@ -66,15 +66,11 @@ async def update_employee(
 
     clauses = ", ".join(f"{column} = ${index}" for index, (column, _) in enumerate(fields, start=1))
     values = [value for _, value in fields] + [employee_id]
-    row = await conn.fetchrow(
-        f"""
-        UPDATE employees
-        SET {clauses}
-        WHERE id = ${len(values)}
-        RETURNING id, name, cpf, pis, job_title, department, is_active, hired_at, created_at, updated_at
-        """,
-        *values,
+    # colunas vêm de whitelist fixa; valores são placeholders $n
+    query = "UPDATE employees SET {clauses} WHERE id = ${placeholder} RETURNING id, name, cpf, pis, job_title, department, is_active, hired_at, created_at, updated_at".format(  # nosec B608  # noqa: UP032
+        clauses=clauses, placeholder=len(values)
     )
+    row = await conn.fetchrow(query, *values)
     return dict(row) if row else None
 
 
@@ -122,18 +118,14 @@ async def list_employees(
         where.append(f"(name ILIKE ${len(params) - 1} OR registration ILIKE ${len(params)})")
 
     where_sql = " AND ".join(where)
-    total = await conn.fetchval(f"SELECT count(*) FROM employees WHERE {where_sql}", *params)
-
-    rows = await conn.fetch(
-        f"""
-        SELECT id, name, cpf, pis, job_title, department, is_active, hired_at, created_at, updated_at
-        FROM employees
-        WHERE {where_sql}
-        ORDER BY created_at DESC
-        LIMIT ${len(params) + 2} OFFSET ${len(params) + 1}
-        """,
+    total = await conn.fetchval(
+        f"SELECT count(*) FROM employees WHERE {where_sql}",  # nosec B608
         *params,
-        (page - 1) * per_page,
-        per_page,
     )
+
+    # filtros vêm de whitelist fixa; valores são placeholders $n
+    query = "SELECT id, name, cpf, pis, job_title, department, is_active, hired_at, created_at, updated_at FROM employees WHERE {where_sql} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}".format(  # nosec B608  # noqa: UP032
+        where_sql=where_sql, limit=len(params) + 2, offset=len(params) + 1
+    )
+    rows = await conn.fetch(query, *params, per_page, (page - 1) * per_page)
     return [dict(row) for row in rows], int(total or 0)

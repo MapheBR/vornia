@@ -19,7 +19,9 @@ async def set_rls_context(conn: asyncpg.Connection, claims: dict[str, Any]) -> N
 
 
 @asynccontextmanager
-async def rls_connection(claims: dict[str, Any] | None = None) -> AsyncGenerator[asyncpg.Connection, None]:
+async def rls_connection(
+    claims: dict[str, Any] | None = None,
+) -> AsyncGenerator[asyncpg.Connection, None]:
     """Acquire a database connection with RLS context set."""
     pool = await get_db_pool()
     async with pool.acquire() as conn, conn.transaction():

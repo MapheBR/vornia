@@ -13,9 +13,22 @@ DEFAULT_TEST_DATABASE_URL = "postgresql://vornia:vornia@localhost:15433/vornia"
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 
 
+def resolve_database_url() -> str:
+    """Resolve the test database URL.
+
+    Priority: TEST_DATABASE_URL, then DATABASE_URL (set by CI), then the local
+    development default.
+    """
+    return (
+        os.environ.get("TEST_DATABASE_URL")
+        or os.environ.get("DATABASE_URL")
+        or DEFAULT_TEST_DATABASE_URL
+    )
+
+
 @pytest.fixture(scope="session")
 def database_url() -> str:
-    return os.environ.get("TEST_DATABASE_URL", DEFAULT_TEST_DATABASE_URL)
+    return resolve_database_url()
 
 
 @pytest.fixture(scope="session", autouse=True)

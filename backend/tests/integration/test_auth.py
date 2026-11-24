@@ -4,6 +4,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from vornia.main import app
+from vornia.services.security import create_access_token
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -116,7 +117,7 @@ async def test_me_without_cookie_returns_401() -> None:
     assert response.status_code == 401
 
 
-async def test_tenant_isolation_user_cannot_see_other_company_data() -> None:
+async def test_me_returns_the_company_from_the_token() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client_a:
         register_a = await client_a.post(
             "/api/v1/auth/register",
@@ -150,3 +151,47 @@ async def test_tenant_isolation_user_cannot_see_other_company_data() -> None:
 
     assert response.status_code == 200
     assert response.json()["company_id"] == company_a_id
+
+
+async def test_me_with_foreign_company_claim_returns_401() -> None:
+    """Token valido de user A com claim da company B nao pode ler o usuario.
+
+    O RLS esconde a linha, entao a API precisa negar em vez de vazar dados.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client_a:
+        register_a = await client_a.post(
+            "/api/v1/auth/register",
+            json={
+                "company_name": "Company A",
+                "email": "user-a@example.com",
+                "password": "strong-password",
+                "full_name": "User A",
+            },
+        )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client_b:
+        register_b = await client_b.post(
+            "/api/v1/auth/register",
+            json={
+                "company_name": "Company B",
+                "email": "user-b@example.com",
+                "password": "strong-password",
+                "full_name": "User B",
+            },
+        )
+
+    user_a_id = register_a.json()["id"]
+    company_b_id = register_b.json()["company_id"]
+
+    forged_token = create_access_token(
+        user_id=user_a_id,
+        email="user-a@example.com",
+        company_id=company_b_id,
+        role="admin",
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        client.cookies.set("token", forged_token)
+        response = await client.get("/api/v1/auth/me")
+
+    assert response.status_code == 401

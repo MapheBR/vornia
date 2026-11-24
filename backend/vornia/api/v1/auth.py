@@ -76,11 +76,17 @@ async def login(request: LoginRequest, response: Response) -> dict[str, Any]:
 
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:  # noqa: B008
-    return await auth_service.get_me(
-        user_id=current_user["user_id"],
-        company_id=current_user["company_id"],
-        role=current_user["role"],
-    )
+    try:
+        return await auth_service.get_me(
+            user_id=current_user["user_id"],
+            company_id=current_user["company_id"],
+            role=current_user["role"],
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found for this tenant",
+        ) from exc
 
 
 @router.post("/logout")

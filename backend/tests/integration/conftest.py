@@ -10,11 +10,13 @@ import pytest
 import pytest_asyncio
 
 DEFAULT_TEST_DATABASE_URL = "postgresql://vornia:vornia@localhost:15433/vornia"
+DEFAULT_TEST_DATABASE_URL_APP = "postgresql://vornia_app:vornia_app@localhost:15433/vornia"
+DEFAULT_TEST_DATABASE_URL_BOOTSTRAP = "postgresql://vornia_auth:vornia_auth@localhost:15433/vornia"
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 def resolve_database_url() -> str:
-    """Resolve the test database URL.
+    """Resolve the owner/migrations database URL.
 
     Priority: TEST_DATABASE_URL, then DATABASE_URL (set by CI), then the local
     development default.
@@ -26,6 +28,24 @@ def resolve_database_url() -> str:
     )
 
 
+def resolve_app_database_url() -> str:
+    """Resolve the RLS-enforced runtime database URL."""
+    return (
+        os.environ.get("TEST_DATABASE_URL_APP")
+        or os.environ.get("DATABASE_URL_APP")
+        or DEFAULT_TEST_DATABASE_URL_APP
+    )
+
+
+def resolve_bootstrap_database_url() -> str:
+    """Resolve the BYPASSRLS bootstrap database URL used by register/login."""
+    return (
+        os.environ.get("TEST_DATABASE_URL_BOOTSTRAP")
+        or os.environ.get("DATABASE_URL_BOOTSTRAP")
+        or DEFAULT_TEST_DATABASE_URL_BOOTSTRAP
+    )
+
+
 @pytest.fixture(scope="session")
 def database_url() -> str:
     return resolve_database_url()
@@ -34,6 +54,8 @@ def database_url() -> str:
 @pytest.fixture(scope="session", autouse=True)
 def configure_environment(database_url: str) -> str:
     os.environ["DATABASE_URL"] = database_url
+    os.environ["DATABASE_URL_APP"] = resolve_app_database_url()
+    os.environ["DATABASE_URL_BOOTSTRAP"] = resolve_bootstrap_database_url()
     os.environ["COOKIE_SECURE"] = "false"
     return database_url
 
@@ -51,9 +73,13 @@ def apply_migrations(configure_environment: str) -> None:
 
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
-async def clean_database(database_url: str) -> AsyncGenerator[None, None]:
-    pool = await asyncpg.create_pool(database_url)
-    assert pool is not None
+async def clean_database() -> AsyncGenerator[None, None]:
+    """Limpa os dados usando a role de bootstrap (BYPASSRLS).
+
+    Com FORCE ROW LEVEL SECURITY, o owner tambem esta sujeito a RLS e nao
+    conseguiria apagar linhas sem claims.
+    """
+    pool = await asyncpg.create_pool(os.environ["DATABASE_URL_BOOTSTRAP"])
     try:
         async with pool.acquire() as conn:
             await conn.execute("DELETE FROM company_users;")

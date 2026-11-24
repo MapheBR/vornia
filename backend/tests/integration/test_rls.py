@@ -159,6 +159,107 @@ async def test_app_role_sees_nothing_without_claims() -> None:
     assert users == 0
 
 
+async def _seed_employee(
+    app_pool: asyncpg.Pool,
+    *,
+    company_id: str,
+    name: str,
+    cpf: str | None = None,
+) -> str:
+    """Cria colaborador pelo caminho de producao: role de runtime com claims."""
+    async with app_pool.acquire() as conn, conn.transaction():
+        await conn.execute(
+            "SELECT set_config('request.jwt.claims', $1, true)",
+            json.dumps({"company_id": company_id}),
+        )
+        employee_id = await conn.fetchval(
+            """
+            INSERT INTO employees (company_id, name, cpf)
+            VALUES ($1, $2, $3)
+            RETURNING id
+            """,
+            company_id,
+            name,
+            cpf,
+        )
+    return str(employee_id)
+
+
+async def test_employees_rls_is_forced() -> None:
+    app_pool = await asyncpg.create_pool(os.environ["DATABASE_URL_APP"])
+    try:
+        async with app_pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT c.relrowsecurity, c.relforcerowsecurity
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relname = 'employees'
+                """
+            )
+    finally:
+        await app_pool.close()
+
+    assert row is not None, "tabela employees nao existe"
+    assert row["relrowsecurity"] is True
+    assert row["relforcerowsecurity"] is True
+
+
+async def test_employee_from_other_tenant_is_invisible() -> None:
+    """Claims de A nao alcancam colaborador de B, mesmo pedindo o id direto."""
+    bootstrap = await asyncpg.create_pool(os.environ["DATABASE_URL_BOOTSTRAP"])
+    app_pool = await asyncpg.create_pool(os.environ["DATABASE_URL_APP"])
+    try:
+        ids = await _seed_two_tenants(bootstrap)
+        employee_a = await _seed_employee(
+            app_pool, company_id=ids["company_a"], name="Colaborador A", cpf="11144477735"
+        )
+        employee_b = await _seed_employee(
+            app_pool, company_id=ids["company_b"], name="Colaborador B", cpf="52998224725"
+        )
+
+        async with app_pool.acquire() as conn, conn.transaction():
+            await conn.execute(
+                "SELECT set_config('request.jwt.claims', $1, true)",
+                json.dumps({"company_id": ids["company_a"]}),
+            )
+            visible = await conn.fetch("SELECT id, name FROM employees")
+            by_foreign_id = await conn.fetch("SELECT id FROM employees WHERE id = $1", employee_b)
+            by_own_id = await conn.fetch("SELECT id FROM employees WHERE id = $1", employee_a)
+
+    finally:
+        await app_pool.close()
+        await bootstrap.close()
+
+    assert [str(row["id"]) for row in visible] == [employee_a]
+    assert by_foreign_id == []
+    assert [str(row["id"]) for row in by_own_id] == [employee_a]
+
+
+async def test_app_role_cannot_insert_employee_for_other_tenant() -> None:
+    """WITH CHECK barra a escrita cruzada: claims de A nao criam linha em B."""
+    bootstrap = await asyncpg.create_pool(os.environ["DATABASE_URL_BOOTSTRAP"])
+    app_pool = await asyncpg.create_pool(os.environ["DATABASE_URL_APP"])
+    try:
+        ids = await _seed_two_tenants(bootstrap)
+
+        async with app_pool.acquire() as conn:
+            with pytest.raises(asyncpg.exceptions.InsufficientPrivilegeError):
+                async with conn.transaction():
+                    await conn.execute(
+                        "SELECT set_config('request.jwt.claims', $1, true)",
+                        json.dumps({"company_id": ids["company_a"]}),
+                    )
+                    await conn.execute(
+                        "INSERT INTO employees (company_id, name) VALUES ($1, $2)",
+                        ids["company_b"],
+                        "Intruso",
+                    )
+    finally:
+        await app_pool.close()
+        await bootstrap.close()
+
+
 async def test_no_claims_on_reused_connection_returns_zero_rows() -> None:
     """Depois de uma transacao com claims, a mesma conexao sem claims ve zero.
 

@@ -7,7 +7,7 @@ Sistema de gestão de ponto eletrônico, jornadas, banco de horas e conformidade
 - **Backend:** FastAPI + Python 3.11
 - **Banco de dados:** PostgreSQL 16
 - **Autenticação:** JWT próprio no FastAPI
-- **Frontend:** Next.js 14+ + Tailwind CSS
+- **Frontend:** Next.js 14+ + Tailwind CSS + shadcn/ui
 - **Hospedagem:** Oracle Cloud Always Free VM (ARM, 2 OCPU / 12 GB RAM) + Docker Compose + Caddy
 - **Custo:** $0/mês na camada Always Free
 
@@ -18,16 +18,61 @@ Sistema de gestão de ponto eletrônico, jornadas, banco de horas e conformidade
 - Docker + Docker Compose
 - Node.js 20+ (para desenvolvimento local do frontend)
 - Python 3.11+ (para desenvolvimento local do backend)
+- PostgreSQL 16+ (para desenvolvimento local do backend, ou use Docker)
 - Conta Oracle Cloud Always Free (com upgrade para PAYG em produção)
 
 ## Setup local
 
 1. Copie `.env.example` para `.env` e ajuste os valores.
-2. Suba os containers:
+2. Gere um `JWT_SECRET`:
    ```bash
-   docker compose up -d
+   python scripts/generate-jwt-secret.py
    ```
-3. O backend estará em `http://localhost:8000` e o frontend em `http://localhost:3000`.
+3. Configure o PostgreSQL local (ou use `docker compose up -d postgres`).
+4. Aplique as migrations:
+   ```bash
+   cd backend
+   alembic upgrade head
+   ```
+5. Instale as dependências do backend:
+   ```bash
+   cd backend
+   python -m venv .venv
+   .venv\Scripts\activate  # Windows
+   pip install -e ".[dev]"
+   ```
+6. Instale as dependências do frontend:
+   ```bash
+   cd frontend
+   npm install
+   ```
+7. Inicie o backend e o frontend:
+   ```bash
+   cd backend
+   uvicorn vornia.main:app --reload --port 8000
+   ```
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+8. O backend estará em `http://localhost:8000` e o frontend em `http://localhost:3000`.
+
+## Testes
+
+```bash
+cd backend
+pytest
+```
+
+Para rodar apenas testes unitários (sem PostgreSQL):
+```bash
+pytest -m unit
+```
+
+Para rodar testes de integração (requer PostgreSQL):
+```bash
+pytest -m integration
+```
 
 ## Estrutura
 

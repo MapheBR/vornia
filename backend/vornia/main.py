@@ -19,3 +19,9 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(title="Vornia API", version="0.1.0", lifespan=lifespan)
 
 app.include_router(api_v1_router, prefix="/api/v1")
+
+
+@app.get("/health")
+async def health_check() -> dict[str, str]:
+    """Health check endpoint."""
+    return {"status": "ok"}

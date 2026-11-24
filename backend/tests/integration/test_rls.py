@@ -157,3 +157,36 @@ async def test_app_role_sees_nothing_without_claims() -> None:
     assert companies == 0
     assert company_users == 0
     assert users == 0
+
+
+async def test_no_claims_on_reused_connection_returns_zero_rows() -> None:
+    """Depois de uma transacao com claims, a mesma conexao sem claims ve zero.
+
+    Apos o fim de uma transacao que usou `set_config(..., true)`, o GUC fica
+    como string vazia. A policy precisa tratar isso como ausencia de claim
+    (0 linhas) e nao como JSON invalido (erro).
+    """
+    bootstrap = await asyncpg.create_pool(os.environ["DATABASE_URL_BOOTSTRAP"])
+    app_pool = await asyncpg.create_pool(os.environ["DATABASE_URL_APP"], min_size=1, max_size=1)
+    try:
+        ids = await _seed_two_tenants(bootstrap)
+
+        async with app_pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "SELECT set_config('request.jwt.claims', $1, true)",
+                    json.dumps({"company_id": ids["company_a"]}),
+                )
+                assert await conn.fetchval("SELECT count(*) FROM companies") == 1
+
+            companies = await conn.fetchval("SELECT count(*) FROM companies")
+            company_users = await conn.fetchval("SELECT count(*) FROM company_users")
+            users = await conn.fetchval("SELECT count(*) FROM users")
+
+    finally:
+        await app_pool.close()
+        await bootstrap.close()
+
+    assert companies == 0
+    assert company_users == 0
+    assert users == 0

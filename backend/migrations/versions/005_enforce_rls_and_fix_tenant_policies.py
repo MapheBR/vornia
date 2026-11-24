@@ -24,8 +24,14 @@ def _company_id() -> str:
     `current_setting('request.jwt.claims.company_id')` does not navigate JSON:
     it looks up a different, unset GUC and returns NULL. The whole value must be
     read and then parsed as JSON.
+
+    NULLIF guards the pooled-connection case: after a transaction that used
+    `set_config(..., true)`, the GUC is reset to an empty string, and `''::json`
+    raises instead of yielding NULL. Both cases must mean "no claim" (0 rows).
     """
-    return "(current_setting('request.jwt.claims', true)::json ->> 'company_id')::uuid"
+    return (
+        "(NULLIF(current_setting('request.jwt.claims', true), '')::json" " ->> 'company_id')::uuid"
+    )
 
 
 def _drop_policies(table: str, suffixes: Sequence[str]) -> None:

@@ -24,7 +24,6 @@ async def _get_pool(name: str, url: str) -> asyncpg.Pool:
     """Return a pool bound to the current event loop, recreating it if needed."""
     current_loop = asyncio.get_running_loop()
     entry = _pools.get(name)
-
     if entry is not None and entry[1] is not current_loop:
         with suppress(Exception):
             await entry[0].close()

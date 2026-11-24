@@ -8,6 +8,9 @@ from pathlib import Path
 import asyncpg
 import pytest
 import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+
+from vornia.main import app
 
 DEFAULT_TEST_DATABASE_URL = "postgresql://vornia:vornia@localhost:15433/vornia"
 DEFAULT_TEST_DATABASE_URL_APP = "postgresql://vornia_app:vornia_app@localhost:15433/vornia"
@@ -84,7 +87,24 @@ async def clean_database() -> AsyncGenerator[None, None]:
         async with pool.acquire() as conn:
             await conn.execute("DELETE FROM company_users;")
             await conn.execute("DELETE FROM users;")
+            await conn.execute("DELETE FROM employees;")
             await conn.execute("DELETE FROM companies;")
         yield
     finally:
         await pool.close()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def client() -> AsyncGenerator[AsyncClient, None]:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as async_client:
+        yield async_client
+
+
+@pytest_asyncio.fixture(scope="function")
+async def other_client() -> AsyncGenerator[AsyncClient, None]:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as async_client:
+        yield async_client

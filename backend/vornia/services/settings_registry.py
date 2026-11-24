@@ -1,8 +1,17 @@
 """Registry de chaves de configuração por empresa (allowlist)."""
 
-from typing import Any
+from typing import Any, Protocol
 
 from pydantic import BaseModel
+
+
+class ValueSetting(Protocol):
+    """Schema de setting com um campo `value`."""
+
+    value: Any
+
+    @classmethod
+    def model_validate(cls, obj: dict[str, Any]) -> "ValueSetting": ...
 
 
 class TimezoneSetting(BaseModel):
@@ -17,7 +26,7 @@ class BoolSetting(BaseModel):
     value: bool
 
 
-SETTINGS_REGISTRY: dict[str, type[BaseModel]] = {
+SETTINGS_REGISTRY: dict[str, type[ValueSetting]] = {
     "timezone": TimezoneSetting,
     "workday_minutes": IntegerSetting,
     "tolerance_minutes": IntegerSetting,

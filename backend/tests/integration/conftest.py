@@ -2,12 +2,15 @@
 
 import os
 import subprocess
+import sys
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
 import asyncpg
 import pytest
 import pytest_asyncio
+
+from vornia.infrastructure.database import close_db_pool
 
 DEFAULT_TEST_DATABASE_URL = "postgresql://vornia:vornia@localhost:15433/vornia"
 DEFAULT_TEST_DATABASE_URL_APP = "postgresql://vornia_app:vornia_app@localhost:15433/vornia"
@@ -65,7 +68,7 @@ def apply_migrations(configure_environment: str) -> None:
     env = os.environ.copy()
     env["DATABASE_URL"] = configure_environment
     subprocess.run(
-        ["alembic", "upgrade", "head"],
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=str(BACKEND_DIR),
         env=env,
         check=True,
@@ -82,9 +85,14 @@ async def clean_database() -> AsyncGenerator[None, None]:
     pool = await asyncpg.create_pool(os.environ["DATABASE_URL_BOOTSTRAP"])
     try:
         async with pool.acquire() as conn:
+            await conn.execute("DELETE FROM settings;")
+            await conn.execute("DELETE FROM employees;")
             await conn.execute("DELETE FROM company_users;")
             await conn.execute("DELETE FROM users;")
             await conn.execute("DELETE FROM companies;")
         yield
     finally:
+        # Cada teste roda em um event loop novo; fechar os pools cacheados evita
+        # conexoes obsoletas e esgotamento de max_connections durante a suíte.
+        await close_db_pool()
         await pool.close()

@@ -80,6 +80,30 @@ O runtime nunca deve usar `DATABASE_URL` (owner) — o app falha ao subir se `DA
 
 Em ambientes com volume já criado, é necessário recriar o volume (`docker compose down -v`) ou rodar o `provision-db-roles.sql` manualmente, pois os scripts de init só executam em banco vazio.
 
+## Endpoints implementados
+
+Todos os endpoints abaixo exigem o cookie `token` (JWT HttpOnly) e um vínculo ativo
+do usuário com o `company_id` da claim. O isolamento é reforçado por RLS no banco.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/api/v1/auth/register` | Cria empresa + admin e retorna o token |
+| `POST` | `/api/v1/auth/login` | Autentica e retorna o token |
+| `GET` | `/api/v1/auth/me` | Dados do usuário autenticado |
+| `POST` | `/api/v1/auth/logout` | Remove o cookie |
+| `POST` | `/api/v1/employees` | Cria colaborador |
+| `GET` | `/api/v1/employees` | Lista colaboradores ativos do tenant |
+| `GET` | `/api/v1/employees/{id}` | Busca colaborador |
+| `PATCH` | `/api/v1/employees/{id}` | Atualiza colaborador |
+| `DELETE` | `/api/v1/employees/{id}` | Exclusão lógica (`is_active=false`) |
+| `GET` | `/api/v1/settings` | Configurações do tenant (`{chave: valor}`) |
+| `GET` | `/api/v1/settings/{key}` | Busca configuração |
+| `PUT` | `/api/v1/settings/{key}` | Cria/atualiza configuração (valor JSON) |
+| `DELETE` | `/api/v1/settings/{key}` | Remove configuração |
+
+Telas: `/colaboradores` e `/configuracoes` (defina `NEXT_PUBLIC_API_URL` para apontar
+ao backend; o padrão em dev é `http://localhost:8000`).
+
 ## Testes
 
 ```bash

@@ -2,7 +2,7 @@
 
 **Versão:** 1.1 (GO para código — hospedagem Oracle Cloud Always Free)  
 **Data:** 2026-11-23  
-**Status:** Aguardando aprovação final para Sprint 0
+**Status:** Sprint 0 e Sprint 1 concluídos; Sprint 2 (colaboradores + configurações) pronto para revisão na branch `feat/sprint-2-employees-settings`
 
 > **Decisão de hospedagem atualizada:** Oracle Cloud Always Free VM ARM (2 OCPU / 12 GB RAM) + Docker Compose + PostgreSQL 16 local + Caddy (HTTPS) + JWT próprio no FastAPI. **Custo: $0/mês.** Nenhum serviço que durma/pause ou viole termos comerciais será usado.
 

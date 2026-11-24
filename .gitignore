@@ -68,6 +68,9 @@ redis_data/
 caddy_data/
 caddy_config/
 
+# PostgreSQL local de desenvolvimento
+.postgres-data/
+
 # IDE
 .vscode/
 .idea/

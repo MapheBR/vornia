@@ -52,6 +52,11 @@ jobs:
       - name: Security scan with bandit
         run: bandit -r vornia/
 
+      - name: Verify dev environment
+        run: |
+          python -m pip_audit --version
+          pip check
+
       - name: Audit dependencies
         run: pip-audit
 

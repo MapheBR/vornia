@@ -1,0 +1,47 @@
+#!/bin/sh
+# Hook de pre-commit do Vornia.
+#
+# Objetivo: nenhum arquivo Python vazio entra no historico e o lint roda no
+# que esta sendo commitado. A garantia definitiva e o teste
+# `tests/unit/test_no_empty_source_files.py` (roda no CI); este hook apenas
+# antecipa o erro para o momento do commit.
+#
+# Instalacao (uma vez por clone):
+#   git config core.hooksPath .githooks
+set -eu
+
+files=$(git diff --cached --name-only --diff-filter=ACM -- 'backend/*.py' 'backend/**/*.py')
+
+if [ -z "$files" ]; then
+    exit 0
+fi
+
+status=0
+for file in $files; do
+    case "$file" in
+        */__init__.py) continue ;;
+    esac
+    if [ ! -s "$file" ]; then
+        echo "pre-commit: arquivo Python vazio: $file" >&2
+        status=1
+    fi
+done
+
+if [ "$status" -ne 0 ]; then
+    exit 1
+fi
+
+relative=$(echo "$files" | sed 's|^backend/||')
+
+if [ -x backend/.venv/bin/ruff ]; then
+    ruff_bin="$PWD/backend/.venv/bin/ruff"
+elif [ -x backend/.venv/Scripts/ruff.exe ]; then
+    ruff_bin="$PWD/backend/.venv/Scripts/ruff.exe"
+elif command -v ruff >/dev/null 2>&1; then
+    ruff_bin=$(command -v ruff)
+else
+    echo "pre-commit: ruff nao encontrado; pulando lint" >&2
+    exit 0
+fi
+
+(cd backend && "$ruff_bin" check $relative)

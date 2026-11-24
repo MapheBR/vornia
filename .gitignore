@@ -14,6 +14,9 @@ opencode.json
 # Python
 .venv/
 __pycache__/
+
+# Excecoes para o frontend
+!frontend/src/lib/
 *.py[cod]
 *$py.class
 *.so
@@ -67,6 +70,9 @@ postgres_data/
 redis_data/
 caddy_data/
 caddy_config/
+
+# PostgreSQL local de desenvolvimento
+.postgres-data/
 
 # IDE
 .vscode/

@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
@@ -7,6 +9,9 @@ export default function HomePage() {
       <p className="mt-4 text-lg text-vornia-azul-profundo/80">
         Workforce Intelligence
       </p>
+      <Button className="mt-8" variant="secondary">
+        Começar agora
+      </Button>
     </main>
   );
 }

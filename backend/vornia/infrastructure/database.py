@@ -30,7 +30,7 @@ async def _get_pool(name: str, url: str) -> asyncpg.Pool:
         entry = None
 
     if entry is None:
-        entry = (await asyncpg.create_pool(url), current_loop)
+        entry = (await asyncpg.create_pool(url, min_size=1, max_size=5), current_loop)
         _pools[name] = entry
 
     return entry[0]

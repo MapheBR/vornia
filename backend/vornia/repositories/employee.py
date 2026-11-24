@@ -127,5 +127,5 @@ async def list_employees(
     query = "SELECT id, name, cpf, pis, job_title, department, is_active, hired_at, created_at, updated_at FROM employees WHERE {where_sql} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}".format(  # nosec B608  # noqa: UP032
         where_sql=where_sql, limit=len(params) + 2, offset=len(params) + 1
     )
-    rows = await conn.fetch(query, *params, per_page, (page - 1) * per_page)
+    rows = await conn.fetch(query, *params, (page - 1) * per_page, per_page)
     return [dict(row) for row in rows], int(total or 0)

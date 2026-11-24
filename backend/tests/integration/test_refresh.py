@@ -1,6 +1,5 @@
 """Integração do fluxo de refresh token, rotação, reuso e logout."""
 
-
 import asyncpg
 import pytest
 from fastapi import status

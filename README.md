@@ -157,3 +157,31 @@ pytest -m integration
 ## Licença
 
 Proprietária — Tecnova.
+
+
+## Sprint 2 — Fases 2 a 4
+
+### CRUD de colaboradores
+
+- `POST /api/v1/employees`, `GET /api/v1/employees` (paginação `page`/`per_page`, filtros
+  `search`/`active`), `GET /api/v1/employees/{id}`, `PATCH`, `DELETE` (soft delete via
+  `is_active=false`).
+- CPF e PIS válidos (dígitos verificadores), armazenados apenas como dígitos. CPF é
+  exibido completo apenas para `admin`/`manager`; em listagens aparece mascarado.
+- `employees` com `ENABLE` e `FORCE ROW LEVEL SECURITY`.
+
+### Refresh token
+
+- Access token de **30 minutos**; refresh token opaco de 7 dias, armazenado como
+  SHA-256 na tabela `refresh_tokens` (sem grant para a role de runtime).
+- `POST /api/v1/auth/refresh` rotaciona o token; reuso de um token revogado revoga
+  toda a família. `POST /api/v1/auth/logout` revoga o refresh e limpa os cookies.
+- Cookie `refresh_token`: `HttpOnly`, `Secure` (em produção), `SameSite=Strict`,
+  `Path=/api/v1/auth`.
+
+### Settings
+
+- `GET /api/v1/settings`, `GET /api/v1/settings/{key}`, `PUT`, `DELETE`.
+- Allowlist com 6 chaves (`timezone`, `workday_minutes`, `tolerance_minutes`,
+  `lunch_minutes`, `overtime_enabled`, `week_start`), validadas por Pydantic. Chave
+  desconhecida retorna `422` e nunca é persistida.

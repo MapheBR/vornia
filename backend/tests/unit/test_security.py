@@ -59,7 +59,7 @@ def test_create_access_token_includes_expected_claims() -> None:
     assert claims["email"] == "alice@example.com"
     assert claims["company_id"] == "company-1"
     assert claims["role"] == "admin"
-    assert claims["exp"] - claims["iat"] == 24 * 60 * 60
+    assert claims["exp"] - claims["iat"] == 30 * 60
 
 
 def test_decode_access_token_rejects_invalid_token() -> None:

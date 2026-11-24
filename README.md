@@ -29,24 +29,31 @@ Sistema de gestão de ponto eletrônico, jornadas, banco de horas e conformidade
    python scripts/generate-jwt-secret.py
    ```
 3. Configure o PostgreSQL local (ou use `docker compose up -d postgres`).
-4. Aplique as migrations:
+4. Provisione as roles de runtime (idempotente, executar como superusuário):
+   ```bash
+   psql -U postgres -d vornia \
+     -v app_password="$VORNIA_APP_PASSWORD" \
+     -v auth_password="$VORNIA_AUTH_PASSWORD" \
+     -f scripts/provision-db-roles.sql
+   ```
+5. Aplique as migrations:
    ```bash
    cd backend
    alembic upgrade head
    ```
-5. Instale as dependências do backend:
+6. Instale as dependências do backend:
    ```bash
    cd backend
    python -m venv .venv
    .venv\Scripts\activate  # Windows
    pip install -e ".[dev]"
    ```
-6. Instale as dependências do frontend:
+7. Instale as dependências do frontend:
    ```bash
    cd frontend
    npm install
    ```
-7. Inicie o backend e o frontend:
+8. Inicie o backend e o frontend:
    ```bash
    cd backend
    uvicorn vornia.main:app --reload --port 8000
@@ -55,7 +62,23 @@ Sistema de gestão de ponto eletrônico, jornadas, banco de horas e conformidade
    cd frontend
    npm run dev
    ```
-8. O backend estará em `http://localhost:8000` e o frontend em `http://localhost:3000`.
+9. O backend estará em `http://localhost:8000` e o frontend em `http://localhost:3000`.
+
+## Segurança multi-tenant (RLS)
+
+O isolamento entre tenants é garantido pelo PostgreSQL, não pelo código Python. Três roles são usadas:
+
+| Role | Uso | Atributos |
+|---|---|---|
+| `vornia` | owner do schema; Alembic e administração | `DATABASE_URL` |
+| `vornia_app` | runtime do FastAPI | `NOBYPASSRLS`, não-owner; `DATABASE_URL_APP` |
+| `vornia_auth` | apenas `register`/`login` (bootstrap de tenant) | `BYPASSRLS`; `DATABASE_URL_BOOTSTRAP` |
+
+As tabelas de negócio têm `ENABLE` **e** `FORCE ROW LEVEL SECURITY`: nem o owner escapa das policies. As policies leem `current_setting('request.jwt.claims', true)::json ->> 'company_id'`.
+
+O runtime nunca deve usar `DATABASE_URL` (owner) — o app falha ao subir se `DATABASE_URL_APP` não estiver definida.
+
+Em ambientes com volume já criado, é necessário recriar o volume (`docker compose down -v`) ou rodar o `provision-db-roles.sql` manualmente, pois os scripts de init só executam em banco vazio.
 
 ## Testes
 

@@ -9,8 +9,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-vornia}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vornia}
       POSTGRES_DB: ${POSTGRES_DB:-vornia}
+      VORNIA_APP_PASSWORD: ${VORNIA_APP_PASSWORD:-vornia_app}
+      VORNIA_AUTH_PASSWORD: ${VORNIA_AUTH_PASSWORD:-vornia_auth}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/provision-db-roles.sql:/docker-entrypoint-initdb.d/provision-db-roles.sql:ro
+      - ./docker/postgres-init/01-provision-roles.sh:/docker-entrypoint-initdb.d/01-provision-roles.sh:ro
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
@@ -41,6 +45,8 @@ services:
         condition: service_started
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL_APP: ${DATABASE_URL_APP}
+      DATABASE_URL_BOOTSTRAP: ${DATABASE_URL_BOOTSTRAP}
       JWT_SECRET: ${JWT_SECRET}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}

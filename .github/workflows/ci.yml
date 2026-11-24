@@ -55,9 +55,20 @@ jobs:
       - name: Audit dependencies
         run: pip-audit
 
+      - name: Provision database roles
+        env:
+          PGPASSWORD: vornia
+        run: |
+          psql -h localhost -U vornia -d vornia \
+            -v app_password=vornia_app \
+            -v auth_password=vornia_auth \
+            -f ../scripts/provision-db-roles.sql
+
       - name: Test with pytest
         env:
           DATABASE_URL: postgresql://vornia:vornia@localhost:5432/vornia
+          DATABASE_URL_APP: postgresql://vornia_app:vornia_app@localhost:5432/vornia
+          DATABASE_URL_BOOTSTRAP: postgresql://vornia_auth:vornia_auth@localhost:5432/vornia
           JWT_SECRET: test-secret-not-for-production
           COOKIE_SECURE: "false"
         run: pytest

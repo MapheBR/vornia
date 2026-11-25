@@ -14,7 +14,7 @@ import pytest
 
 pytestmark = pytest.mark.integration
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 BACKUP_SCRIPT = ROOT / "scripts" / "backup-postgres.sh"
 RESTORE_DB = "vornia_restore_test"
 

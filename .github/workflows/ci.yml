@@ -148,7 +148,7 @@ jobs:
 
       - name: Create CI env file
         env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-secret-with-at-least-32-bytes' }}
         run: |
           test -n "$JWT_SECRET" || { echo "JWT_SECRET secret is required"; exit 1; }
           cat > .env <<EOF

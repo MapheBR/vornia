@@ -112,5 +112,9 @@ PontoJa/
 *.tmp
 *.temp
 
+# Artefatos de teste frontend
+frontend/test-results/
+frontend/playwright-report/
+
 # Cliente HTTP do frontend: exceção deve vir DEPOIS de `lib/` (regra acima)
 !frontend/src/lib/

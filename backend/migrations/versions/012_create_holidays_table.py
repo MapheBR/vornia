@@ -15,12 +15,24 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "holidays",
-        sa.Column("id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column(
+            "id",
+            postgresql.UUID(as_uuid=True),
+            server_default=sa.text("gen_random_uuid()"),
+            nullable=False,
+        ),
         sa.Column("company_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("date", sa.Date(), nullable=False),
         sa.Column("name", sa.String(200), nullable=False),
-        sa.Column("jornada_especial_hours", sa.Numeric(4, 2), server_default=sa.text("4.0"), nullable=False),
-        sa.Column("recurring_yearly", sa.Boolean(), server_default=sa.text("false"), nullable=False),
+        sa.Column(
+            "jornada_especial_hours",
+            sa.Numeric(4, 2),
+            server_default=sa.text("4.0"),
+            nullable=False,
+        ),
+        sa.Column(
+            "recurring_yearly", sa.Boolean(), server_default=sa.text("false"), nullable=False
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["company_id"], ["companies.id"], ondelete="CASCADE"),
         sa.UniqueConstraint("company_id", "date", name="holidays_tenant_date_key"),

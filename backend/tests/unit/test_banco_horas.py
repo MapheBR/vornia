@@ -30,9 +30,7 @@ def test_adicional_noturno_20_pct() -> None:
 
 
 def test_hora_extra_noturna_70_pct() -> None:
-    r = calcular_adicionais(
-        horas_extras=1.0, horas_noturnas=1.0, valor_hora=10.0, config=DEFAULT
-    )
+    r = calcular_adicionais(horas_extras=1.0, horas_noturnas=1.0, valor_hora=10.0, config=DEFAULT)
     # No legado, `valor_extra_noturna` é o ADICIONAL sobre a extra (1,70 − 1,50 = 0,20).
     assert r["valor_extra_noturna"] == pytest.approx(2.0)
 
@@ -96,7 +94,12 @@ def test_dia_sem_batida_debita_jornada() -> None:
 def test_saldo_negativo_10h() -> None:
     result = calcular_saldo_mensal(
         jornadas=[
-            {"date": date(2026, 11, 25), "worked_hours": 0.0, "expected_hours": 8.0, "status": "absence"},
+            {
+                "date": date(2026, 11, 25),
+                "worked_hours": 0.0,
+                "expected_hours": 8.0,
+                "status": "absence",
+            },
         ],
         dias_uteis=1,
         valor_hora=10.0,

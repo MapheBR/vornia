@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from vornia.dependencies import get_current_user
 from vornia.middleware.rls import rls_connection
@@ -26,11 +26,7 @@ async def recalculate(
 async def list_balances(
     current_user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
 ) -> dict[str, Any]:
-    return {
-        "data": await balance_service.list_balances(
-            company_id=current_user["company_id"]
-        )
-    }
+    return {"data": await balance_service.list_balances(company_id=current_user["company_id"])}
 
 
 @router.post("/holidays", status_code=status.HTTP_201_CREATED)
@@ -39,6 +35,7 @@ async def create_holiday(
     current_user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
 ) -> dict[str, Any]:
     from datetime import date as _date
+
     holiday_date = _date.fromisoformat(str(payload["date"]))
 
     async with rls_connection(claims={"company_id": current_user["company_id"]}) as conn:

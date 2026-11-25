@@ -77,9 +77,7 @@ def _client(company_id: str) -> AsyncClient:
 async def test_recalculate_creates_balance(tenant) -> None:  # type: ignore[no-untyped-def]
     company_id, _ = tenant
     async with _client(company_id) as client:
-        response = await client.post(
-            "/api/v1/balances/recalculate", json={"month": "2026-11"}
-        )
+        response = await client.post("/api/v1/balances/recalculate", json={"month": "2026-11"})
     assert response.status_code == 200
     assert "recalculated" in response.json()
 

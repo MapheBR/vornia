@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import CONFIG from "../../../docker-compose.yml?raw";
-import CADDYFILE from "../../../docker/Caddyfile?raw";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+const ROOT = path.resolve(process.cwd(), "..");
+const CONFIG = readFileSync(path.join(ROOT, "docker-compose.yml"), "utf-8");
+const CADDYFILE = readFileSync(path.join(ROOT, "docker", "Caddyfile"), "utf-8");
 
 describe("configuração de rede (same-origin via Caddy)", () => {
   it("Caddyfile encaminha /api/* para o FastAPI na porta 8000", () => {

@@ -10,7 +10,8 @@ SECURITY_HEADERS = {
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Content-Security-Policy": (
         "default-src 'self'; base-uri 'self'; object-src 'none'; "
-        "frame-ancestors 'none'; script-src 'self'; style-src 'self'; "
+        "frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data:; font-src 'self'; connect-src 'self'"
     ),
 }

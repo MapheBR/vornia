@@ -5,6 +5,7 @@ from typing import Any
 
 from vornia.middleware.rls import bootstrap_connection, rls_connection
 from vornia.repositories import auth as auth_repo
+from vornia.services.auth_refresh import issue_refresh_token
 from vornia.services.security import create_access_token, hash_password, verify_password
 
 
@@ -37,6 +38,8 @@ async def register(
             role="admin",
         )
 
+        refresh_token = await issue_refresh_token(conn, user_id=user_id, company_id=company_id)
+
         token = create_access_token(
             user_id=user_id,
             email=email,
@@ -51,6 +54,7 @@ async def register(
         "company_id": company_id,
         "role": "admin",
         "token": token,
+        "refresh_token": refresh_token,
     }
 
 
@@ -70,6 +74,8 @@ async def login(*, email: str, password: str) -> dict[str, Any]:
         company_id = str(company_user["company_id"])
         role = company_user["role"]
 
+        refresh_token = await issue_refresh_token(conn, user_id=user_id, company_id=company_id)
+
         token = create_access_token(
             user_id=user_id,
             email=email,
@@ -84,6 +90,7 @@ async def login(*, email: str, password: str) -> dict[str, Any]:
         "company_id": company_id,
         "role": role,
         "token": token,
+        "refresh_token": refresh_token,
     }
 
 

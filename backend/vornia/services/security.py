@@ -7,7 +7,7 @@ from typing import Any
 import jwt
 from passlib.context import CryptContext
 
-ACCESS_TOKEN_EXPIRE_HOURS = 24
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -41,7 +41,7 @@ def create_access_token(
 ) -> str:
     """Create a JWT access token."""
     now = datetime.now(UTC)
-    expire = now + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    expire = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     payload: dict[str, Any] = {
         "sub": user_id,

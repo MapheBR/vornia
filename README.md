@@ -48,21 +48,36 @@ Sistema de gestão de ponto eletrônico, jornadas, banco de horas e conformidade
    .venv\Scripts\activate  # Windows
    pip install -e ".[dev]"
    ```
-7. Instale as dependências do frontend:
+7. Verifique que o ambiente de desenvolvimento ficou completo:
+   ```bash
+   python -m pip_audit --version
+   pip check
+   ```
+   O extra `dev` inclui `pytest`, `ruff`, `mypy`, `bandit` e `pip-audit`. Se algum
+   desses comandos não existir, o venv foi populado em partes: recrie-o e repita o
+   passo 6. O CI valida o mesmo conjunto antes do scan de dependências.
+8. Ative os hooks de git do repositório (uma vez por clone):
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+   O hook `pre-commit` rejeita arquivos Python vazios e roda `ruff` no que está
+   sendo commitado. A garantia definitiva é o teste
+   `tests/unit/test_no_empty_source_files.py`, que roda no CI.
+9. Instale as dependências do frontend:
    ```bash
    cd frontend
    npm install
    ```
-8. Inicie o backend e o frontend:
-   ```bash
-   cd backend
-   uvicorn vornia.main:app --reload --port 8000
-   ```
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-9. O backend estará em `http://localhost:8000` e o frontend em `http://localhost:3000`.
+10. Inicie o backend e o frontend:
+    ```bash
+    cd backend
+    uvicorn vornia.main:app --reload --port 8000
+    ```
+    ```bash
+    cd frontend
+    npm run dev
+    ```
+11. O backend estará em `http://localhost:8000` e o frontend em `http://localhost:3000`.
 
 ## Segurança multi-tenant (RLS)
 
@@ -79,6 +94,28 @@ As tabelas de negócio têm `ENABLE` **e** `FORCE ROW LEVEL SECURITY`: nem o own
 O runtime nunca deve usar `DATABASE_URL` (owner) — o app falha ao subir se `DATABASE_URL_APP` não estiver definida.
 
 Em ambientes com volume já criado, é necessário recriar o volume (`docker compose down -v`) ou rodar o `provision-db-roles.sql` manualmente, pois os scripts de init só executam em banco vazio.
+
+## Proteção da branch `main`
+
+A `main` é protegida por **processo**, não por regra automática do GitHub.
+
+O plano free do GitHub não permite rulesets/branch protection neste repositório: a API responde
+`403 — Upgrade to GitHub Pro or make this repository public to enable this feature`. O arquivo
+`scripts/ruleset-main.json` está pronto para ser aplicado quando o plano mudar:
+
+```bash
+gh api --method POST repos/MapheBR/vornia/rulesets --input scripts/ruleset-main.json
+```
+
+Enquanto isso, o contrato é:
+
+1. Nenhum commit direto na `main`; todo trabalho entra por PR.
+2. PR só é mergeado com CI verde (backend + frontend) e revisão humana.
+3. Merge só com aprovação explícita do responsável pelo projeto.
+4. `git log --oneline main` deve mostrar apenas merges de PR.
+
+O CI roda em `push` e `pull_request` para a `main`, então qualquer push direto ainda é
+verificado — mas a barreira de revisão é humana e depende deste contrato.
 
 ## Testes
 
@@ -120,3 +157,31 @@ pytest -m integration
 ## Licença
 
 Proprietária — Tecnova.
+
+
+## Sprint 2 — Fases 2 a 4
+
+### CRUD de colaboradores
+
+- `POST /api/v1/employees`, `GET /api/v1/employees` (paginação `page`/`per_page`, filtros
+  `search`/`active`), `GET /api/v1/employees/{id}`, `PATCH`, `DELETE` (soft delete via
+  `is_active=false`).
+- CPF e PIS válidos (dígitos verificadores), armazenados apenas como dígitos. CPF é
+  exibido completo apenas para `admin`/`manager`; em listagens aparece mascarado.
+- `employees` com `ENABLE` e `FORCE ROW LEVEL SECURITY`.
+
+### Refresh token
+
+- Access token de **30 minutos**; refresh token opaco de 7 dias, armazenado como
+  SHA-256 na tabela `refresh_tokens` (sem grant para a role de runtime).
+- `POST /api/v1/auth/refresh` rotaciona o token; reuso de um token revogado revoga
+  toda a família. `POST /api/v1/auth/logout` revoga o refresh e limpa os cookies.
+- Cookie `refresh_token`: `HttpOnly`, `Secure` (em produção), `SameSite=Strict`,
+  `Path=/api/v1/auth`.
+
+### Settings
+
+- `GET /api/v1/settings`, `GET /api/v1/settings/{key}`, `PUT`, `DELETE`.
+- Allowlist com 6 chaves (`timezone`, `workday_minutes`, `tolerance_minutes`,
+  `lunch_minutes`, `overtime_enabled`, `week_start`), validadas por Pydantic. Chave
+  desconhecida retorna `422` e nunca é persistida.

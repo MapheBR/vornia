@@ -84,9 +84,11 @@ async def test_second_process_does_not_duplicate(tenant) -> None:  # type: ignor
     await journey_processing.process_company(company_id=company_id)
     await journey_processing.process_company(company_id=company_id)
 
-    async with asyncpg.create_pool(
-        "postgresql://vornia_app:vornia_app@localhost:15433/vornia"
-    ) as pool, pool.acquire() as conn, conn.transaction():
+    async with (
+        asyncpg.create_pool("postgresql://vornia_app:vornia_app@localhost:15433/vornia") as pool,
+        pool.acquire() as conn,
+        conn.transaction(),
+    ):
         await conn.execute(
             "SELECT set_config('request.jwt.claims', $1, true)",
             json.dumps({"company_id": company_id}),

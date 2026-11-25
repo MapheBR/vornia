@@ -8,8 +8,12 @@ export default defineConfig({
       "@": path.resolve(process.cwd(), "src"),
     },
   },
+  esbuild: {
+    jsx: "automatic",
+  },
   test: {
-    environment: "node",
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
   },
 });

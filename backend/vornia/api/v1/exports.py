@@ -1,7 +1,8 @@
 """Endpoints de exportação de jornadas (XLSX/PDF)."""
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
@@ -14,7 +15,12 @@ router = APIRouter(tags=["exports"], prefix="/exports")
 
 
 async def _fetch(
-    *, company_id: str, employee_id: str | None, start: date, end: date
+    *,
+    company_id: str,
+    employee_id: UUID | None,
+    start: date,
+    end: date,
+    limit: int,
 ) -> list[dict[str, Any]]:
     async with rls_connection(claims={"company_id": company_id}) as conn:
         rows = await conn.fetch(
@@ -26,11 +32,13 @@ async def _fetch(
             WHERE p.company_id = $1 AND p.date BETWEEN $2 AND $3
               AND ($4::uuid IS NULL OR p.employee_id = $4)
             ORDER BY p.date DESC
+            LIMIT $5
             """,
             company_id,
             start,
             end,
             employee_id,
+            limit,
         )
     return [dict(row) for row in rows]
 
@@ -39,17 +47,24 @@ async def _fetch(
 async def export_xlsx(
     start: date = Query(...),  # noqa: B008
     end: date = Query(...),  # noqa: B008
-    employee_id: str | None = Query(None),  # noqa: B008
+    employee_id: UUID | None = Query(None),  # noqa: B008
     current_user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
 ) -> Response:
+    if end < start or end - start > timedelta(days=366):
+        raise HTTPException(422, detail="Intervalo inválido (máx. 366 dias)")
     rows = await _fetch(
         company_id=current_user["company_id"],
         employee_id=employee_id,
         start=start,
         end=end,
+        limit=XLSX_ROW_LIMIT + 1,
     )
     if len(rows) > XLSX_ROW_LIMIT:
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Muitas linhas")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Muitas linhas",
+            headers={"Retry-After": "60"},
+        )
     return Response(
         content=build_xlsx(rows),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -61,14 +76,17 @@ async def export_xlsx(
 async def export_pdf(
     start: date = Query(...),  # noqa: B008
     end: date = Query(...),  # noqa: B008
-    employee_id: str | None = Query(None),  # noqa: B008
+    employee_id: UUID | None = Query(None),  # noqa: B008
     current_user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
 ) -> Response:
+    if end < start or end - start > timedelta(days=366):
+        raise HTTPException(422, detail="Intervalo inválido (máx. 366 dias)")
     rows = await _fetch(
         company_id=current_user["company_id"],
         employee_id=employee_id,
         start=start,
         end=end,
+        limit=PDF_ROW_LIMIT + 1,
     )
     if len(rows) > PDF_ROW_LIMIT:
         raise HTTPException(

@@ -42,16 +42,18 @@ async def edit_punch(
     new_value = datetime.fromisoformat(punched_at.replace("Z", "+00:00"))
     async with rls_connection(claims={"company_id": company_id}) as conn:
         before = await conn.fetchrow(
-            "SELECT employee_id, punched_at FROM raw_punches WHERE id = $1",
+            "SELECT employee_id, punched_at FROM raw_punches WHERE id = $1 AND company_id = $2",
             punch_id,
+            company_id,
         )
         if before is None:
             raise LookupError("Batida não encontrada")
 
         await conn.execute(
-            "UPDATE raw_punches SET punched_at = $2 WHERE id = $1",
+            "UPDATE raw_punches SET punched_at = $2 WHERE id = $1 AND company_id = $3",
             punch_id,
             new_value,
+            company_id,
         )
         result = await recalculate_for_punch(
             conn,

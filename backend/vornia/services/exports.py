@@ -17,22 +17,24 @@ HEADERS = ("Colaborador", "Data", "Entrada", "Saída", "Horas", "Situação")
 
 
 def safe_cell(value: Any) -> str:
-    """Neutraliza CSV/formula injection em planilhas."""
-    text = str(value)
-    if text.startswith(("=", "+", "-", "@")):
-        return "'" + text
-    return text
+    """Neutraliza CSV/formula injection (inclusive tabs/CR antes do '=')."""
+    text = str(value).strip()
+    text = "".join(c for c in text if c >= " " or c in "\t")
+    import unicodedata
+
+    text = unicodedata.normalize("NFKD", text).encode("latin-1", "replace").decode("latin-1")
+    return "'" + text if text[:1] in ("=", "+", "-", "@", "\t") else text
 
 
 def _rows(journeys: list[dict[str, Any]]) -> list[tuple[str, ...]]:
     return [
         (
             safe_cell(j.get("employee", "")),
-            str(j.get("date", "")),
-            str(j.get("entry") or ""),
-            str(j.get("exit") or ""),
-            str(j.get("worked_hours", "")),
-            str(j.get("status", "")),
+            safe_cell(j.get("date", "")),
+            safe_cell(j.get("entry") or ""),
+            safe_cell(j.get("exit") or ""),
+            safe_cell(j.get("worked_hours", "")),
+            safe_cell(j.get("status", "")),
         )
         for j in journeys
     ]
@@ -47,6 +49,8 @@ def build_xlsx(journeys: list[dict[str, Any]]) -> bytes:
     sheet.append(HEADERS)
     for row in _rows(journeys):
         sheet.append(row)
+        for cell in sheet[sheet.max_row]:
+            cell.data_type = "s"
     buffer = BytesIO()
     workbook.save(buffer)
     return buffer.getvalue()

@@ -32,6 +32,7 @@ async def create_employee(
         return await employee_service.create_employee(
             company_id=current_user["company_id"],
             data=data,
+            role=current_user["role"],
         )
     except asyncpg.UniqueViolationError as exc:
         raise HTTPException(
@@ -71,6 +72,7 @@ async def get_employee(
         return await employee_service.get_employee(
             company_id=current_user["company_id"],
             employee_id=employee_id,
+            role=current_user["role"],
         )
     except LookupError as exc:
         raise HTTPException(

@@ -63,9 +63,12 @@ async def process_company(*, company_id: str, conn: Any | None = None) -> dict[s
                 processed["notes"],
             )
             await conn.execute(
-                "UPDATE raw_punches SET processed = true WHERE company_id = $1 AND employee_id = $2",
+                "UPDATE raw_punches SET processed = true WHERE company_id = $1 AND employee_id = $2 "
+                "AND punched_at BETWEEN $3 AND $4",
                 company_id,
                 employee_id,
+                min(p["punched_at"] for p in punches),
+                max(p["punched_at"] for p in punches),
             )
             counters["processed"] += 1
     else:

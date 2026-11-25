@@ -24,24 +24,26 @@ async def create_employee(
     *,
     company_id: str,
     data: EmployeeCreate,
+    role: str,
 ) -> EmployeeResponse:
     async with rls_connection(claims={"company_id": company_id}) as conn:
         row = await employee_repo.create_employee(conn, company_id=company_id, data=data)
     if row is None:
         raise ValueError("Falha ao criar colaborador")
-    return _to_response(row, show_cpf=True)
+    return _to_response(row, show_cpf=mask_for_role(role))
 
 
 async def get_employee(
     *,
     company_id: str,
     employee_id: str,
+    role: str,
 ) -> EmployeeResponse:
     async with rls_connection(claims={"company_id": company_id}) as conn:
         row = await employee_repo.get_employee(conn, employee_id)
     if row is None or row.get("is_active") is False:
         raise LookupError("Colaborador não encontrado")
-    return _to_response(row, show_cpf=True)
+    return _to_response(row, show_cpf=mask_for_role(role))
 
 
 async def update_employee(

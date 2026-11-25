@@ -1,8 +1,9 @@
 """Endpoints de edição manual e consulta de auditoria."""
 
 from typing import Any
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from vornia.dependencies import get_current_user
 from vornia.middleware.rls import rls_connection
@@ -13,7 +14,7 @@ router = APIRouter(tags=["audit"])
 
 @router.patch("/raw-punches/{punch_id}")
 async def edit_punch(
-    punch_id: str,
+    punch_id: UUID,
     payload: dict[str, Any],
     current_user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
 ) -> dict[str, Any]:
@@ -26,7 +27,7 @@ async def edit_punch(
     try:
         return await manual_edit.edit_punch(
             company_id=current_user["company_id"],
-            punch_id=punch_id,
+            punch_id=str(punch_id),
             punched_at=str(punched_at),
             reason=reason,
             changed_by=current_user["user_id"],
@@ -41,14 +42,21 @@ async def edit_punch(
 
 @router.get("/audit-logs")
 async def list_audit_logs(
+    limit: int = Query(100, ge=1, le=200),  # noqa: B008
+    offset: int = Query(0, ge=0),  # noqa: B008
     current_user: dict[str, Any] = Depends(get_current_user),  # noqa: B008
 ) -> dict[str, Any]:
+    if current_user["role"] not in ("admin", "manager"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sem permissão")
     async with rls_connection(claims={"company_id": current_user["company_id"]}) as conn:
         rows = await conn.fetch(
             """
             SELECT id, entity_type, entity_id, action, changed_by, changed_at, reason
-            FROM audit_logs WHERE company_id = $1 ORDER BY changed_at DESC LIMIT 100
+            FROM audit_logs WHERE company_id = $1 ORDER BY changed_at DESC
+            LIMIT $2 OFFSET $3
             """,
             current_user["company_id"],
+            limit,
+            offset,
         )
     return {"data": [dict(row) for row in rows]}

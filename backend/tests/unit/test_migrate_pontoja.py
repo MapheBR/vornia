@@ -38,9 +38,7 @@ def legacy_db(tmp_path: Path) -> Path:
 
 
 def _run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [sys.executable, str(SCRIPT), *args], capture_output=True, text=True
-    )
+    return subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True)
 
 
 def test_dry_run_reports_counts_and_divergences(legacy_db: Path) -> None:

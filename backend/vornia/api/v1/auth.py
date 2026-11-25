@@ -2,15 +2,27 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 
-from vornia.dependencies import get_current_user
+from vornia.dependencies import enforce_rate_limit, get_current_user
 from vornia.infrastructure.settings import settings
 from vornia.schemas.auth import LoginRequest, RegisterRequest, UserResponse
 from vornia.services import auth as auth_service
 from vornia.services.auth_refresh import refresh_session, revoke_refresh_session
 
 router = APIRouter(tags=["auth"])
+
+
+async def _limit_login(request: Request) -> None:
+    await enforce_rate_limit(request, "login")
+
+
+async def _limit_register(request: Request) -> None:
+    await enforce_rate_limit(request, "register")
+
+
+async def _limit_refresh(request: Request) -> None:
+    await enforce_rate_limit(request, "refresh")
 
 
 def _set_auth_cookie(response: Response, token: str) -> None:
@@ -38,7 +50,11 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
-async def register(request: RegisterRequest, response: Response) -> dict[str, Any]:
+async def register(
+    request: RegisterRequest,
+    response: Response,
+    _limited: None = Depends(_limit_register),
+) -> dict[str, Any]:
     try:
         result = await auth_service.register(
             company_name=request.company_name,
@@ -65,7 +81,11 @@ async def register(request: RegisterRequest, response: Response) -> dict[str, An
 
 
 @router.post("/login", response_model=UserResponse)
-async def login(request: LoginRequest, response: Response) -> dict[str, Any]:
+async def login(
+    request: LoginRequest,
+    response: Response,
+    _limited: None = Depends(_limit_login),
+) -> dict[str, Any]:
     try:
         result = await auth_service.login(
             email=str(request.email),
@@ -108,6 +128,7 @@ async def me(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[s
 async def refresh(
     response: Response,
     refresh_token: str | None = Cookie(None),
+    _limited: None = Depends(_limit_refresh),
 ) -> dict[str, Any]:
     if refresh_token is None:
         raise HTTPException(

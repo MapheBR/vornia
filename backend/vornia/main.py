@@ -7,11 +7,13 @@ from fastapi import FastAPI
 
 from vornia.api.v1.router import router as api_v1_router
 from vornia.infrastructure.database import close_db_pool, get_db_pool
+from vornia.infrastructure.rate_limit_setup import setup_rate_limit
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     await get_db_pool()
+    setup_rate_limit()
     yield
     await close_db_pool()
 

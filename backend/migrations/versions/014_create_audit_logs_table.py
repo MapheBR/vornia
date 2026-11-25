@@ -39,7 +39,7 @@ def upgrade() -> None:
     op.execute(
         f"CREATE POLICY tenant_isolation_insert_audit_logs ON audit_logs FOR INSERT WITH CHECK (company_id = {claim});"
     )
-    op.execute("GRANT SELECT, INSERT ON audit_logs TO vornia_app;")
+    op.execute("GRANT SELECT, INSERT, DELETE ON audit_logs TO vornia_app;")
     op.execute("GRANT SELECT, INSERT, DELETE ON audit_logs TO vornia_auth;")
 
 

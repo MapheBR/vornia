@@ -183,6 +183,12 @@ jobs:
           E2E_BASE_URL: http://localhost:8080
         run: npx playwright test
 
+      - name: Debug register page
+        if: failure()
+        run: |
+          curl -sS -o /tmp/register.html -w "HTTP %{http_code}\n" http://localhost:8080/register
+          head -c 500 /tmp/register.html
+
       - name: Dump containers on failure
         if: failure()
         run: docker compose logs --tail=200
@@ -196,6 +202,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: frontend/playwright-report/
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
           retention-days: 7
           if-no-files-found: ignore

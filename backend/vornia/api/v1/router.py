@@ -3,6 +3,8 @@
 from fastapi import APIRouter
 
 from vornia.api.v1.auth import router as auth_router
+from vornia.api.v1.balances import router as balances_router
+from vornia.api.v1.dashboard import router as dashboard_router
 from vornia.api.v1.employees import router as employees_router
 from vornia.api.v1.journeys import router as journeys_router
 from vornia.api.v1.settings import router as settings_router
@@ -14,3 +16,5 @@ router.include_router(employees_router)
 router.include_router(settings_router)
 router.include_router(sync_router)
 router.include_router(journeys_router)
+router.include_router(balances_router)
+router.include_router(dashboard_router)

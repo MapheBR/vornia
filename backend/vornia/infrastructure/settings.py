@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     jwt_secret: str = ""
     access_token_expire_hours: int = 24
     cookie_secure: bool = True
+    cors_origins: str = ""  # lista separada por vírgulas (dev: localhost:3000)
 
 
 settings = Settings()

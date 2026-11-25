@@ -33,5 +33,3 @@ ALTER ROLE vornia_app LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
 -- Bootstrap: bypassa RLS de proposito, e usado somente em register/login.
 ALTER ROLE vornia_auth LOGIN NOSUPERUSER BYPASSRLS NOCREATEDB NOCREATEROLE;
 
-ALTER ROLE vornia_app PASSWORD :app_password;
-ALTER ROLE vornia_auth PASSWORD :auth_password;

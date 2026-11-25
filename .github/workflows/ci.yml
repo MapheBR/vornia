@@ -76,10 +76,10 @@ jobs:
         env:
           PGPASSWORD: vornia
         run: |
+          psql -h localhost -U vornia -d vornia -f ../scripts/provision-db-roles.sql
           psql -h localhost -U vornia -d vornia \
-            -v app_password=vornia_app \
-            -v auth_password=vornia_auth \
-            -f ../scripts/provision-db-roles.sql
+            -c "ALTER ROLE vornia_app PASSWORD 'vornia_app'" \
+            -c "ALTER ROLE vornia_auth PASSWORD 'vornia_auth'"
 
       - name: Test with pytest
         env:

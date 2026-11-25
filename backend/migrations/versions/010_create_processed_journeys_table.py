@@ -14,8 +14,7 @@ depends_on: str | Sequence[str] | None = None
 
 def _claim() -> str:
     return (
-        "(NULLIF(current_setting('request.jwt.claims', true), '')::json"
-        " ->> 'company_id')::uuid"
+        "(NULLIF(current_setting('request.jwt.claims', true), '')::json" " ->> 'company_id')::uuid"
     )
 
 
@@ -41,7 +40,9 @@ def upgrade() -> None:
         sa.Column("night_hours", sa.Numeric(5, 2), nullable=True),
         sa.Column("status", sa.String(20), nullable=False),
         sa.Column("notes", sa.Text(), nullable=True),
-        sa.Column("source_punch_ids", postgresql.ARRAY(postgresql.UUID(as_uuid=True)), nullable=True),
+        sa.Column(
+            "source_punch_ids", postgresql.ARRAY(postgresql.UUID(as_uuid=True)), nullable=True
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

@@ -14,8 +14,7 @@ depends_on: str | Sequence[str] | None = None
 
 def _claim() -> str:
     return (
-        "(NULLIF(current_setting('request.jwt.claims', true), '')::json"
-        " ->> 'company_id')::uuid"
+        "(NULLIF(current_setting('request.jwt.claims', true), '')::json" " ->> 'company_id')::uuid"
     )
 
 

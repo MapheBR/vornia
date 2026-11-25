@@ -14,8 +14,7 @@ depends_on: str | Sequence[str] | None = None
 
 def _claim() -> str:
     return (
-        "(NULLIF(current_setting('request.jwt.claims', true), '')::json"
-        " ->> 'company_id')::uuid"
+        "(NULLIF(current_setting('request.jwt.claims', true), '')::json" " ->> 'company_id')::uuid"
     )
 
 
@@ -58,18 +57,14 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "source IN ('controlid','csv','manual')", name="raw_punches_source_check"
         ),
-        sa.CheckConstraint(
-            "mapping_status IN ('ok','unmapped')", name="raw_punches_mapping_check"
-        ),
+        sa.CheckConstraint("mapping_status IN ('ok','unmapped')", name="raw_punches_mapping_check"),
     )
     op.create_index(
         "raw_punches_tenant_punch_idx",
         "raw_punches",
         ["company_id", "employee_id", "punched_at"],
     )
-    op.create_index(
-        "raw_punches_tenant_processed_idx", "raw_punches", ["company_id", "processed"]
-    )
+    op.create_index("raw_punches_tenant_processed_idx", "raw_punches", ["company_id", "processed"])
     op.execute(
         """
         CREATE UNIQUE INDEX raw_punches_natural_key ON raw_punches

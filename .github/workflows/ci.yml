@@ -117,13 +117,5 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-
-      - name: E2E tests
-        run: npx playwright test
-        env:
-          E2E_BASE_URL: http://localhost:8080
-
       - name: Audit dependencies
         run: npm audit

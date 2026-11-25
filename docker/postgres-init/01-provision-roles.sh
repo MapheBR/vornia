@@ -6,6 +6,8 @@ set -eu
 psql -v ON_ERROR_STOP=1 \
     --username "$POSTGRES_USER" \
     --dbname "$POSTGRES_DB" \
-    -v app_password="${VORNIA_APP_PASSWORD:?VORNIA_APP_PASSWORD is required}" \
-    -v auth_password="${VORNIA_AUTH_PASSWORD:?VORNIA_AUTH_PASSWORD is required}" \
     -f /docker-entrypoint-initdb.d/provision-db-roles.sql
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+    -c "ALTER ROLE vornia_app PASSWORD '${VORNIA_APP_PASSWORD:?VORNIA_APP_PASSWORD is required}'" \
+    -c "ALTER ROLE vornia_auth PASSWORD '${VORNIA_AUTH_PASSWORD:?VORNIA_AUTH_PASSWORD is required}'"

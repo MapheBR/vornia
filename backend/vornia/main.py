@@ -10,6 +10,7 @@ from vornia.api.v1.router import router as api_v1_router
 from vornia.infrastructure.database import close_db_pool, get_db_pool
 from vornia.infrastructure.rate_limit_setup import setup_rate_limit
 from vornia.infrastructure.settings import settings
+from vornia.middleware.security_headers import security_headers_middleware
 
 
 @asynccontextmanager
@@ -32,6 +33,7 @@ if settings.cors_origins:
     )
 
 app.include_router(api_v1_router, prefix="/api/v1")
+app.middleware("http")(security_headers_middleware)
 
 
 @app.get("/health")

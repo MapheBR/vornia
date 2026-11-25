@@ -6,7 +6,9 @@ from vornia.middleware.rls import rls_connection
 from vornia.services.banco_horas import calcular_saldo_mensal
 
 
-async def recalculate_month(*, company_id: str, month: str) -> dict[str, int]:
+async def recalculate_month(
+    *, company_id: str, month: str, conn: Any | None = None
+) -> dict[str, int]:
     """Recalcula `time_balances` para todas as jornadas do mês (upsert)."""
     from datetime import date
 
@@ -15,7 +17,7 @@ async def recalculate_month(*, company_id: str, month: str) -> dict[str, int]:
     next_month = date(year + (number == 12), (number % 12) + 1, 1)
     last_day = date.fromordinal(next_month.toordinal() - 1)
 
-    async with rls_connection(claims={"company_id": company_id}) as conn:
+    if conn is not None:
         journeys = await conn.fetch(
             """
             SELECT employee_id, date, worked_hours, expected_hours, status
@@ -60,7 +62,10 @@ async def recalculate_month(*, company_id: str, month: str) -> dict[str, int]:
                 result["owed_hours"],
                 result["closing_balance"],
             )
-    return {"recalculated": len(by_employee)}
+        return {"recalculated": len(by_employee)}
+    else:
+        async with rls_connection(claims={"company_id": company_id}) as conn:
+            return await recalculate_month(company_id=company_id, month=month, conn=conn)
 
 
 async def list_balances(*, company_id: str) -> list[dict[str, Any]]:

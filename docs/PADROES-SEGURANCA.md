@@ -87,7 +87,7 @@ Os riscos identificados no PontoJa devem ser categoricamente evitados no Vornia:
   - **Produção:** arquivo `.env` na VM Oracle Cloud com permissão `600`.
   - **Desenvolvimento local:** arquivo `.env.local` no `.gitignore`.
 - Validar no startup do FastAPI que todas as variáveis críticas estão definidas. Caso contrário, a aplicação deve falhar com mensagem clara.
-- O frontend nunca acessa o banco diretamente; toda comunicação passa pela API FastAPI com JWT Bearer.
+- O frontend nunca acessa o banco diretamente; toda comunicação passa pela API FastAPI com JWT em cookie HttpOnly.
 
 ### 3.3. Rotação
 
@@ -105,12 +105,12 @@ Os riscos identificados no PontoJa devem ser categoricamente evitados no Vornia:
 - Tabela `users` local armazena: `id`, `email`, `password_hash` (bcrypt/Argon2), `is_active`, `email_verified`, timestamps.
 - Tabela `company_users` vincula usuário a empresa com `role`.
 - O FastAPI possui endpoints próprios de login, refresh, logout e convite de usuários.
-- O frontend Next.js armazena o access token em memória/cookie seguro e o envia no header `Authorization: Bearer <token>`.
+- O backend define o access token em cookie `HttpOnly`/`Secure`/`SameSite=Lax` e o refresh em cookie `HttpOnly`/`Secure`/`SameSite=Strict` com `Path=/api/v1/auth`. O frontend NUNCA lê esses cookies; usa `credentials: 'include'` e renova via `POST /api/v1/auth/refresh`.
 
 ### 4.2. Validação de JWT no Backend
 
 - Implementar uma **FastAPI dependency** que:
-  1. Extrai o Bearer token do header `Authorization`.
+  1. Extrai o token do cookie `token` (HttpOnly).
   2. Valida a assinatura com `JWT_SECRET`, algoritmo `HS256` (ou `RS256` se futuro), `exp`, `iss` e `aud`.
   3. Extrai `sub`, `email`, `role` e `company_id`.
   4. O `company_id` deve obrigatoriamente estar presente no token. Se estiver ausente, rejeitar com HTTP 401.
@@ -224,15 +224,15 @@ Regras:
 
 ### 6.1. CSRF / Proteção contra Requisições Forjadas
 
-O Vornia usa **JWT Bearer** enviado no header `Authorization` (emitido pelo FastAPI). Nessa arquitetura stateless:
+O Vornia usa **JWT em cookie HttpOnly** (emitido pelo FastAPI). Nenhum token é exposto ao JavaScript do navegador:
 
-- **CSRF tradicional não se aplica** ao JWT Bearer, pois o token não é automaticamente enviado pelo navegador como cookie.
+- **CSRF é mitigado por `SameSite=Lax`/`Strict` nos cookies**; como o refresh usa `Path=/api/v1/auth` e `SameSite=Strict`, um site terceiro não consegue disparar a renovação. Para operações sensíveis (edição manual), exija `reason` e autenticação válida.
 - O controle contra requisições forjadas é feito por:
   - CORS restritivo (whitelist de origins).
   - Validação do JWT no backend (assinatura, expiração, `aud`, `iss`).
   - `SameSite=Strict` nos cookies do Next.js (se usados para sessão SSR), nunca `None`.
 
-Se algum fluxo específico passar a usar cookies de sessão em vez de Bearer token, aí sim será obrigatório token CSRF. No MVP, isso não está previsto.
+No MVP, cookies `HttpOnly` + `SameSite` são a defesa adotada; se um fluxo passar a aceitar credenciais cruzadas, reavalie CSRF com token.
 
 ### 6.2. CORS
 

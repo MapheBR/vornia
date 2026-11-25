@@ -185,3 +185,27 @@ Proprietária — Tecnova.
 - Allowlist com 6 chaves (`timezone`, `workday_minutes`, `tolerance_minutes`,
   `lunch_minutes`, `overtime_enabled`, `week_start`), validadas por Pydantic. Chave
   desconhecida retorna `422` e nunca é persistida.
+
+
+## Sprint 6 — Hardening e fechamento do MVP
+
+- **Exportações:** `GET /api/v1/exports/journeys.xlsx` (até 10.000 linhas) e
+  `/journeys.pdf` (até 500 linhas), com `openpyxl`/`fpdf2` (puros Python, leves em ARM).
+  Células são saneadas contra formula injection; intervalo máximo de 366 dias.
+- **Edição manual com cascata atômica:** `PATCH /api/v1/raw-punches/{id}` exige `reason`,
+  recalcula a jornada e o banco de horas e grava o `audit_logs` na **mesma transação**.
+  Qualquer falha faz rollback total. `GET /api/v1/audit-logs` é restrito a admin/manager.
+- **Segurança:** CSP restritivo, HSTS, `X-Content-Type-Options`, `X-Frame-Options` e
+  `Referrer-Policy` no Caddy e no FastAPI; security-review aplicado aos endpoints novos.
+- **Backup:** `scripts/backup-postgres.sh` com retenção de 7 dias e restore testado
+  (`tests/integration/test_backup_restore.py`).
+- **CI:** job `e2e` separado sobe a stack com `docker compose up -d --build`, valida
+  health-checks, roda Playwright e executa `docker compose down -v` no cleanup.
+
+## Documentação final
+
+- `docs/API.md` — contrato OpenAPI gerado por `scripts/export-openapi.py`
+- `docs/LGPD.md` — dados pessoais, mascaramento e direitos do titular
+- `docs/MANUAL-DO-USUARIO.md` — operação dia a dia
+- `docs/PADROES-SEGURANCA.md` — padrões (atualizado para cookies HttpOnly)
+- `docs/SPRINT-*-EVIDENCIAS.md` — relatórios RED→GREEN de cada sprint

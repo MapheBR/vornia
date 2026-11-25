@@ -45,6 +45,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -73,10 +76,10 @@ jobs:
         env:
           PGPASSWORD: vornia
         run: |
+          psql -h localhost -U vornia -d vornia -f ../scripts/provision-db-roles.sql
           psql -h localhost -U vornia -d vornia \
-            -v app_password=vornia_app \
-            -v auth_password=vornia_auth \
-            -f ../scripts/provision-db-roles.sql
+            -c "ALTER ROLE vornia_app PASSWORD 'vornia_app'" \
+            -c "ALTER ROLE vornia_auth PASSWORD 'vornia_auth'"
 
       - name: Test with pytest
         env:
@@ -119,3 +122,96 @@ jobs:
 
       - name: Audit dependencies
         run: npm audit
+
+# Job E2E: sobe a stack real via docker compose e roda Playwright atrás do Caddy.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Create CI env file
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-secret-with-at-least-32-bytes' }}
+        run: |
+          test -n "$JWT_SECRET" || { echo "JWT_SECRET secret is required"; exit 1; }
+          cat > .env <<EOF
+          POSTGRES_USER=vornia
+          POSTGRES_PASSWORD=vornia
+          POSTGRES_DB=vornia
+          VORNIA_APP_PASSWORD=vornia_app
+          VORNIA_AUTH_PASSWORD=vornia_auth
+          DATABASE_URL=postgresql://vornia:vornia@postgres:5432/vornia
+          DATABASE_URL_APP=postgresql://vornia_app:vornia_app@postgres:5432/vornia
+          DATABASE_URL_BOOTSTRAP=postgresql://vornia_auth:vornia_auth@postgres:5432/vornia
+          JWT_SECRET=$JWT_SECRET
+          JWT_ALGORITHM=HS256
+          COOKIE_SECURE=false
+          CORS_ORIGINS=http://localhost:8080
+          REDIS_URL=redis://redis:6379/0
+          RATE_LIMIT_ENABLED=false
+          NEXT_PUBLIC_API_URL=http://localhost:8080
+          EOF
+
+      - name: Start stack
+        run: docker compose up -d --build
+
+      - name: Apply migrations
+        run: |
+          for i in $(seq 1 20); do
+            if docker compose exec -T backend alembic upgrade head; then exit 0; fi
+            sleep 3
+          done
+          echo "Falha ao aplicar migrations"; exit 1
+
+      - name: Wait for Caddy and backend
+        run: |
+          curl --fail --retry 20 --retry-delay 3 --retry-all-errors http://localhost:8080/health
+          curl --fail --retry 20 --retry-delay 3 --retry-all-errors http://localhost:8080/
+
+      - name: Run Playwright E2E
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: http://localhost:8080
+        run: npx playwright test
+
+      - name: Debug register page
+        if: failure()
+        run: |
+          curl -sS -o /tmp/register.html -w "HTTP %{http_code}\n" http://localhost:8080/register
+          head -c 500 /tmp/register.html
+
+      - name: Dump containers on failure
+        if: failure()
+        run: docker compose logs --tail=200
+
+      - name: Stop stack and clean volumes
+        if: always()
+        run: docker compose down -v
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7
+          if-no-files-found: ignore

@@ -8,10 +8,10 @@ from vornia.middleware.rls import rls_connection
 from vornia.services.journey import parse_afd_timestamp, process_day
 
 
-async def process_company(*, company_id: str) -> dict[str, int]:
+async def process_company(*, company_id: str, conn: Any | None = None) -> dict[str, int]:
     """Processa batidas não processadas e faz upsert por (tenant, employee, date)."""
     counters = {"processed": 0, "skipped": 0}
-    async with rls_connection(claims={"company_id": company_id}) as conn:
+    if conn is not None:
         rows = await conn.fetch(
             """
             SELECT id, employee_id, punched_at, raw_data, processed
@@ -23,9 +23,9 @@ async def process_company(*, company_id: str) -> dict[str, int]:
         )
         by_day: dict[tuple[str, date], list[dict[str, Any]]] = defaultdict(list)
         for row in rows:
-            dt = parse_afd_timestamp(
-                row["punched_at"] if "T" in row["punched_at"] else row["raw_data"][:25]
-            )
+            punched = row["punched_at"]
+            raw_value = punched.isoformat() if hasattr(punched, "isoformat") else str(punched)
+            dt = parse_afd_timestamp(raw_value if "T" in raw_value else row["raw_data"][:25])
             by_day[(str(row["employee_id"]), dt.date())].append(dict(row))
 
         for (employee_id, day), punches in by_day.items():
@@ -63,9 +63,16 @@ async def process_company(*, company_id: str) -> dict[str, int]:
                 processed["notes"],
             )
             await conn.execute(
-                "UPDATE raw_punches SET processed = true WHERE company_id = $1 AND employee_id = $2",
+                "UPDATE raw_punches SET processed = true WHERE company_id = $1 AND employee_id = $2 "
+                "AND punched_at BETWEEN $3 AND $4",
                 company_id,
                 employee_id,
+                min(p["punched_at"] for p in punches),
+                max(p["punched_at"] for p in punches),
             )
             counters["processed"] += 1
+    else:
+        async with rls_connection(claims={"company_id": company_id}) as conn:
+            return await process_company(company_id=company_id, conn=conn)
+
     return counters

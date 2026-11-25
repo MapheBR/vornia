@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/pyproject.toml backend/README.md ./
-COPY backend/vornia ./vornia
+COPY pyproject.toml ./
+COPY vornia ./vornia
 
 RUN pip install --no-cache-dir -e ".[dev]"
 

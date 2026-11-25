@@ -19,6 +19,8 @@ if [ "${1:-}" = "--restore" ]; then
     fi
     TMP_SQL="${DUMP_FILE%.gz}"
     gzip -cd "$DUMP_FILE" > "$TMP_SQL"
+    # pg_dump 17 emite SET transaction_timeout; servidores 16 nao conhecem.
+    sed -i '/^SET transaction_timeout/d' "$TMP_SQL"
     echo "Restaurando $TMP_SQL ..."
     psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$TMP_SQL"
     rm -f "$TMP_SQL"

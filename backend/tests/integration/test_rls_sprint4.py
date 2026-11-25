@@ -2,7 +2,6 @@
 
 import json
 import os
-from collections.abc import AsyncGenerator
 
 import asyncpg
 import pytest

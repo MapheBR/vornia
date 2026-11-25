@@ -40,7 +40,7 @@ class ControlIDClient:
             transport=transport,
             auth=(config.username, config.password),
             timeout=config.timeout,
-            verify=False if transport is None else True,
+            verify=transport is None,
         )
         self._session: str | None = None
 

@@ -23,7 +23,7 @@ export function LoginForm() {
         body: JSON.stringify({ email, password }),
       });
       router.push("/colaboradores");
-    } catch (cause) {
+    } catch {
       setError("Credenciais inválidas");
     } finally {
       setSaving(false);

@@ -15,14 +15,22 @@ AFD_1 = "2026-11-25T08:00:00-03000000123456789012A1B2"
 AFD_2 = "2026-11-25T17:00:00-03000000123456789012C3D4"
 
 
+def _bootstrap_url() -> str:
+    from tests.integration.conftest import resolve_bootstrap_database_url
+
+    return resolve_bootstrap_database_url()
+
+
+def _app_url() -> str:
+    from tests.integration.conftest import resolve_app_database_url
+
+    return resolve_app_database_url()
+
+
 @pytest.fixture
 async def tenant():  # type: ignore[no-untyped-def]
-    bootstrap = await asyncpg.create_pool(
-        "postgresql://vornia_auth:vornia_auth@localhost:15433/vornia"
-    )
-    app_pool = await asyncpg.create_pool(
-        "postgresql://vornia_app:vornia_app@localhost:15433/vornia"
-    )
+    bootstrap = await asyncpg.create_pool(_bootstrap_url())
+    app_pool = await asyncpg.create_pool(_app_url())
     company_id = ""
     try:
         async with bootstrap.acquire() as conn:
@@ -85,7 +93,7 @@ async def test_second_process_does_not_duplicate(tenant) -> None:  # type: ignor
     await journey_processing.process_company(company_id=company_id)
 
     async with (
-        asyncpg.create_pool("postgresql://vornia_app:vornia_app@localhost:15433/vornia") as pool,
+        asyncpg.create_pool(_app_url()) as pool,
         pool.acquire() as conn,
         conn.transaction(),
     ):

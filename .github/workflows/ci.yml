@@ -172,6 +172,14 @@ jobs:
       - name: Start stack
         run: docker compose up -d --build
 
+      - name: Apply migrations
+        run: |
+          for i in $(seq 1 20); do
+            if docker compose exec -T backend alembic upgrade head; then exit 0; fi
+            sleep 3
+          done
+          echo "Falha ao aplicar migrations"; exit 1
+
       - name: Wait for Caddy and backend
         run: |
           curl --fail --retry 20 --retry-delay 3 --retry-all-errors http://localhost:8080/health

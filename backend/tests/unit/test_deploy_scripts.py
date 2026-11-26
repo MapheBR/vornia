@@ -24,12 +24,13 @@ def test_vm_readiness_script_covers_required_checks() -> None:
         assert token in text, token
 
 
-def test_caddyfile_uses_domain_variable() -> None:
+def test_caddyfile_serves_local_http_without_domain() -> None:
+    # Deploy local substituiu o plano Oracle: não há domínio público nem ACME.
     text = (ROOT / "docker" / "Caddyfile.prod").read_text(encoding="utf-8")
-    assert "{$VORNIA_DOMAIN}" in text
+    assert "auto_https off" in text
+    assert ":80 {" in text
     assert "reverse_proxy backend:8000" in text
     assert "reverse_proxy frontend:3000" in text
-    assert "redir https" in text
 
 
 def test_prod_compose_does_not_expose_internal_ports() -> None:

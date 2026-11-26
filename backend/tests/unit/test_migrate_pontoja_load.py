@@ -118,7 +118,7 @@ def test_transform_maps_admins_to_users_and_company_users(
 ) -> None:
     monkeypatch.setenv("VORNIA_MIGRATION_ADMIN_PASSWORD", "temporaria-teste")
     result = migration.transform(_data(legacy_db))
-    assert result["users"][0]["email"] == "admin.teste@tecnova.local"
+    assert result["users"][0]["email"] == "admin.teste@tecnova.com.br"
     assert result["users"][0]["full_name"] == "Admin Teste"
     assert result["users"][0]["password_hash"].startswith("$2")
     assert result["company_users"][0]["role"] == "admin"

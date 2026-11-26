@@ -86,8 +86,9 @@ $env:BACKUP_DIR = 'C:\vornia\backups'
 & 'backend\.venv\Scripts\python.exe' scripts/migrate_pontoja.py --sqlite PontoJa/database/controlid.db --backup-first --apply
 ```
 
-E-mails dos admins são sintetizados como `<usuario>@tecnova.local`
-(configurável via `--admin-email-domain`); devem ser corrigidos depois.
+E-mails dos admins são sintetizados como `<usuario>@tecnova.com.br`
+(configurável via `--admin-email-domain`). Não usar `.local`: o Pydantic
+`EmailStr` rejeita TLDs reservados e o login falha com 422.
 `--reference-month` (padrão `2026-11-01`) define o mês de referência dos saldos.
 
 ## Regras de segurança (mantidas)

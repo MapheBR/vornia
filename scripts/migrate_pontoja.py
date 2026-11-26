@@ -46,7 +46,8 @@ TABLE_MAP = {
 DEFAULT_COMPANY_SLUG = "tecnova"
 DEFAULT_COMPANY_NAME = "Tecnova"
 DEFAULT_REFERENCE_MONTH = "2026-11-01"
-DEFAULT_ADMIN_EMAIL_DOMAIN = "tecnova.local"
+# .local é um TLD reservado e é rejeitado pelo EmailStr do Pydantic no login.
+DEFAULT_ADMIN_EMAIL_DOMAIN = "tecnova.com.br"
 COMPOSE = ("docker", "compose")
 
 

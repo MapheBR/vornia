@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag a deployar (ex.: v1.0.0)"
+        required: true
+        type: string
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate production configs
+        run: |
+          test -f docker/Caddyfile.prod
+          test -f docker-compose.prod.yml
+          grep -q 'VORNIA_DOMAIN' docker/Caddyfile.prod
+          ! grep -q '8000:8000' docker-compose.prod.yml
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+            echo "${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}" > .deploy-target
+            ./scripts/check-vm-readiness.sh .
+            git fetch --tags --quiet
+            TARGET=$(cat .deploy-target)
+            git checkout "$TARGET"
+            echo "$TARGET" > .deploy-version
+            echo "${{ secrets.VORNIA_DOMAIN }}" > .deploy-domain
+            export VORNIA_DOMAIN="${{ secrets.VORNIA_DOMAIN }}"
+            export VORNIA_ACME_EMAIL="${{ secrets.VORNIA_ACME_EMAIL }}"
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+            docker compose exec -T backend alembic upgrade head
+            for i in $(seq 1 20); do
+              curl --fail --retry 3 --retry-all-errors https://"$VORNIA_DOMAIN"/health && break
+              sleep 5
+            done
+            curl --fail https://"$VORNIA_DOMAIN"/health

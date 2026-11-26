@@ -24,10 +24,13 @@ OK: saldos_usuario: esperado=2, encontrado=2
 OK: admins: esperado=2, encontrado=2
 
 === CONTAGEM POR TABELA DESTINO ===
+companies: 1 linha(s)
 employees: 26 linha(s)
 holidays: 15 linha(s)
 settings: 20 linha(s)
 time_balances: 2 linha(s)
+users: 2 linha(s)
+company_users: 2 linha(s)
 
 Nenhuma escrita realizada (--dry-run).
 ```
@@ -48,16 +51,44 @@ Consultas read-only no destino, antes e depois do dry-run:
 
 O arquivo SQLite de origem manteve o mesmo tamanho e `LastWriteTime` — confirmação de que o legado não foi modificado.
 
-## ⚠️ Estado da implementação (importante)
+## Estado da implementação
 
-`scripts/migrate_pontoja.py` é um **scaffold**: `--apply` **não executa a carga real**. Ele apenas:
+A carga real foi implementada com TDD (branch `feat/migracao-real-pontoja`):
 
-1. exige `--backup-first` e roda `pg_dump` antes de qualquer escrita;
-2. imprime `Carga real não executada neste scaffold — revisar relatório antes de --apply`.
+- `BEGIN; ... COMMIT;` em **uma única sessão psql** com `ON_ERROR_STOP=1`:
+  se qualquer `INSERT` falhar, a transação é revertida por completo.
+- Idempotência por chave natural (`ON CONFLICT`) em todas as tabelas:
+  `companies(slug)`, `employees(company_id, control_id)`,
+  `holidays(company_id, date)`, `settings(company_id, key)`,
+  `time_balances(company_id, employee_id, reference_month)`,
+  `users(email)` e `company_users(company_id, user_id)`.
+- `company_id` determinístico (`uuid5`) e `request.jwt.claims` setado no início
+  da transação, conforme a regra de isolamento por tenant.
+- Mapeamentos corrigidos para as colunas reais do legado: `feriados.descricao`
+  (não `nome`), `configuracoes.valor` convertido para JSONB, e
+  `saldos_usuario.usuario_id` ligado ao `employees.control_id`.
+- `admins` → `users` + `company_users` com role `admin`.
 
-Portanto, **a migração de dados ainda não está implementada**. Antes de prometer dados migrados ao time, é preciso escrever a carga transacional (com testes, chave natural de idempotência e rollback) — seguindo TDD. A aprovação deste dry-run autoriza apenas o backup preventivo, não uma carga que hoje não existe.
+`pg_dump` **não está instalado no host Windows**: o script usa
+`docker compose exec -T postgres pg_dump -U vornia vornia`, redirecionando a
+saída para `BACKUP_DIR`. O mesmo mecanismo (`docker compose exec ... psql`)
+executa a carga, então não é necessário publicar a porta 5432.
 
-`pg_dump` **não está instalado no host Windows**. Para `--backup-first --apply` será necessário executar o backup pelo container (`docker compose exec -T postgres pg_dump ...`, conforme `scripts/backup-postgres.sh`) ou instalar as ferramentas de cliente PostgreSQL no host.
+### Senha temporária dos admins
+
+Os hashes do legado são `scrypt:*`, incompatíveis com o `bcrypt` do Vornia.
+A carga não os copia: ela gera hashes bcrypt de uma **senha temporária**
+fornecida via variável de ambiente (nunca no código, nunca no `.env`):
+
+```powershell
+$env:VORNIA_MIGRATION_ADMIN_PASSWORD = '<senha-temporaria-.definida-pelo-operador>'
+$env:BACKUP_DIR = 'C:\vornia\backups'
+& 'backend\.venv\Scripts\python.exe' scripts/migrate_pontoja.py --sqlite PontoJa/database/controlid.db --backup-first --apply
+```
+
+E-mails dos admins são sintetizados como `<usuario>@tecnova.local`
+(configurável via `--admin-email-domain`); devem ser corrigidos depois.
+`--reference-month` (padrão `2026-11-01`) define o mês de referência dos saldos.
 
 ## Regras de segurança (mantidas)
 
@@ -71,10 +102,11 @@ Portanto, **a migração de dados ainda não está implementada**. Antes de prom
 
 - [x] Dry-run executado com o SQLite real e zero divergências
 - [x] Confirmado que nenhuma linha foi escrita no destino
-- [ ] **Aprovação humana explícita para seguir** (não concedida até o momento)
-- [ ] Carga real implementada e testada (hoje é scaffold)
-- [ ] Backup preventivo executado e validado com restore
+- [x] Carga real implementada e testada (130 testes unitários verdes)
+- [ ] **Aprovação humana explícita do código para seguir** (não concedida até o momento)
+- [ ] Backup preventivo executado via Docker e validado com restore
 - [ ] Spot-check de CPF/saldos após a carga
+- [ ] Correção dos e-mails/senhas temporárias dos admins
 - [ ] Registro final em `docs/migracao_checklist.md`
 
 **Não executar `--apply` sem a aprovação explícita do usuário.**

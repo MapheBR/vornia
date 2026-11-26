@@ -30,9 +30,7 @@ def test_caddyfile_prod_keeps_headers_without_hsts_on_plain_http() -> None:
 
 
 def test_tailscale_https_caddyfile_uses_certificate_and_hsts() -> None:
-    text = (ROOT / "docker" / "Caddyfile.tailscale-https").read_text(
-        encoding="utf-8"
-    )
+    text = (ROOT / "docker" / "Caddyfile.tailscale-https").read_text(encoding="utf-8")
     assert "tls {$VORNIA_TLS_CERT} {$VORNIA_TLS_KEY}" in text
     assert "Strict-Transport-Security" in text
     assert "reverse_proxy backend:8000" in text
@@ -49,9 +47,7 @@ def test_local_compose_publishes_only_caddy_port() -> None:
 
 
 def test_local_readiness_script_checks_tailscale_and_health() -> None:
-    text = (ROOT / "scripts" / "check-local-readiness.sh").read_text(
-        encoding="utf-8"
-    )
+    text = (ROOT / "scripts" / "check-local-readiness.sh").read_text(encoding="utf-8")
     for token in (
         "docker --version",
         "docker compose version",

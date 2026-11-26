@@ -10,9 +10,13 @@ const config: Config = {
     extend: {
       colors: {
         "vornia-azul-profundo": "var(--vornia-azul-profundo)",
+        "vornia-azul-claro": "var(--vornia-azul-claro)",
         "vornia-verde-suave": "var(--vornia-verde-suave)",
+        "vornia-verde-escuro": "var(--vornia-verde-escuro)",
         "vornia-cinza-claro": "var(--vornia-cinza-claro)",
         "vornia-branco": "var(--vornia-branco)",
+        "vornia-borda": "var(--vornia-borda)",
+        "vornia-sombra": "var(--vornia-sombra)",
       },
     },
   },

@@ -89,10 +89,11 @@ Thumbs.db
 logs/
 *.log
 
-# Backups locais
+# Backups locais (contêm dados de produção — nunca versionar)
 *.db
 *.db.bak
 *.sql.bak
+backups/
 
 # Credenciais e chaves
 *.pem

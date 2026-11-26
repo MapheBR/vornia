@@ -1,0 +1,32 @@
+# Overlay de deploy local (self-hosting + Tailscale).
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+#
+# Somente o Caddy é publicado (8080). Postgres, Redis, FastAPI e Next.js
+# ficam exclusivamente na rede interna do Compose.
+services:
+  postgres:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  backend:
+    ports: !reset []
+
+  frontend:
+    ports: !reset []
+
+  caddy:
+    volumes:
+      # Padrão: HTTP na rede do Tailscale, sem domínio público.
+      # Para HTTPS com certificado do Tailscale, troque a linha abaixo por:
+      #   - ./docker/Caddyfile.tailscale-https:/etc/caddy/Caddyfile:ro
+      - ./docker/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - ./docker/certs:/etc/caddy/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "8080:80"
+      # Usado apenas com Caddyfile.tailscale-https (tailscale cert).
+      - "8443:443"

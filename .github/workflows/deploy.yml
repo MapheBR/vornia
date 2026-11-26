@@ -1,5 +1,10 @@
 name: Deploy
 
+# PAUSADO por decisão do projeto: o deploy passa a ser local (self-hosting na
+# Tecnova) via `git pull` + `docker compose up -d --build`. Os jobs abaixo
+# permanecem registrados para referência histórica, mas não executam.
+# Reativar somente com aprovação explícita e VM/servidor dedicado.
+
 on:
   workflow_dispatch:
     inputs:
@@ -17,6 +22,7 @@ concurrency:
 
 jobs:
   verify:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +34,7 @@ jobs:
           ! grep -q '8000:8000' docker-compose.prod.yml
 
   deploy:
+    if: false
     needs: verify
     runs-on: ubuntu-latest
     environment: production

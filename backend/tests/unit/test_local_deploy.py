@@ -32,6 +32,9 @@ def test_caddyfile_prod_keeps_headers_without_hsts_on_plain_http() -> None:
 def test_tailscale_https_caddyfile_uses_certificate_and_hsts() -> None:
     text = (ROOT / "docker" / "Caddyfile.tailscale-https").read_text(encoding="utf-8")
     assert "tls {$VORNIA_TLS_CERT} {$VORNIA_TLS_KEY}" in text
+    assert "redir https://{$VORNIA_DOMAIN}:8443{uri}" in text
+    # {host} inclui a porta e geraria "https://ip:8080:8443/...".
+    assert "{host}" not in text
     assert "Strict-Transport-Security" in text
     assert "reverse_proxy backend:8000" in text
     assert "reverse_proxy frontend:3000" in text

@@ -176,10 +176,14 @@ sudo tailscale cert vornia-servidor.tail123456.ts.net
 3. Configure o `.env`:
 
 ```dotenv
+VORNIA_DOMAIN=vornia-servidor.tail123456.ts.net
 VORNIA_TLS_CERT=/etc/caddy/certs/vornia-servidor.tail123456.ts.net.crt
 VORNIA_TLS_KEY=/etc/caddy/certs/vornia-servidor.tail123456.ts.net.key
 COOKIE_SECURE=true
 ```
+
+> `VORNIA_DOMAIN` é usado apenas no redirecionamento HTTP → HTTPS. Defina-o
+> exatamente com o nome MagicDNS exibido no painel do Tailscale.
 
 O acesso passa a ser `https://vornia-servidor.tail123456.ts.net:8443`
 (porta 8443 publicada pelo compose local). O HTTP na 8080 redireciona para HTTPS.

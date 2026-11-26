@@ -1,6 +1,13 @@
 :root {
+  /* Paleta principal da marca Vornia */
   --vornia-azul-profundo: #172B40;
   --vornia-verde-suave: #A4D977;
+
+  /* Derivações para hierarquia e superfícies */
+  --vornia-azul-claro: #24435F;
+  --vornia-verde-escuro: #7FAE52;
   --vornia-cinza-claro: #F4F6F7;
   --vornia-branco: #FFFFFF;
+  --vornia-borda: #DCE3E8;
+  --vornia-sombra: 0 8px 24px rgb(23 43 64 / 12%);
 }

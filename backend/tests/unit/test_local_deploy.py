@@ -49,6 +49,15 @@ def test_local_compose_publishes_only_caddy_port() -> None:
         assert port not in text, port
 
 
+def test_local_compose_passes_tls_variables_to_caddy() -> None:
+    # Variaveis do .env nao entram automaticamente no container: o compose
+    # precisa declara-las explicitamente ou o Caddyfile TLS falha ao adaptar.
+    text = (ROOT / "docker-compose.local.yml").read_text(encoding="utf-8")
+    assert "VORNIA_DOMAIN: ${VORNIA_DOMAIN:-}" in text
+    assert "VORNIA_TLS_CERT: ${VORNIA_TLS_CERT:-}" in text
+    assert "VORNIA_TLS_KEY: ${VORNIA_TLS_KEY:-}" in text
+
+
 def test_local_readiness_script_checks_tailscale_and_health() -> None:
     text = (ROOT / "scripts" / "check-local-readiness.sh").read_text(encoding="utf-8")
     for token in (

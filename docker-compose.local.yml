@@ -18,6 +18,12 @@ services:
     ports: !reset []
 
   caddy:
+    # O Compose não injeta automaticamente variáveis do .env no container.
+    # Passe explicitamente para o Caddyfile.tailscale-https (TLS e redirect).
+    environment:
+      VORNIA_DOMAIN: ${VORNIA_DOMAIN:-}
+      VORNIA_TLS_CERT: ${VORNIA_TLS_CERT:-}
+      VORNIA_TLS_KEY: ${VORNIA_TLS_KEY:-}
     volumes:
       # Padrão: HTTP na rede do Tailscale, sem domínio público.
       # Para HTTPS com certificado do Tailscale, troque a linha abaixo por:

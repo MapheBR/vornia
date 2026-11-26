@@ -191,6 +191,24 @@ O acesso passa a ser `https://vornia-servidor.tail123456.ts.net:8443`
 > Com HTTP puro na VPN mantenha `COOKIE_SECURE=false` — o tráfego já está
 > criptografado pelo Tailscale. Use `COOKIE_SECURE=true` apenas no modo HTTPS.
 
+As variáveis `VORNIA_DOMAIN`, `VORNIA_TLS_CERT` e `VORNIA_TLS_KEY` são
+repassadas ao Caddy por `docker-compose.local.yml` (o Compose **não** injeta
+variáveis do `.env` automaticamente no container). Sem elas, a diretiva `tls`
+falha ao adaptar a configuração.
+
+Se a porta 8080 já estiver ocupada por outro serviço, publique somente HTTPS
+em um overlay local `docker-compose.https.yml` (fora do git):
+
+```yaml
+services:
+  caddy:
+    ports: !override
+      - "8443:443"
+```
+
+Nesse modo, o `check-local-readiness.sh` não consegue checar `/health` na 8080;
+valide com `curl -kfsS https://localhost:8443/health`.
+
 ## 8. Preparar o código e o `.env`
 
 ```bash

@@ -168,6 +168,18 @@ def test_apply_load_uses_docker_psql_with_on_error_stop() -> None:
     assert "ON_ERROR_STOP=1" in args
 
 
+def test_apply_load_sends_sql_as_utf8() -> None:
+    sql = "SELECT 'canção';"
+    with mock.patch.object(
+        migration.subprocess,
+        "run",
+        return_value=mock.Mock(returncode=0, stderr=b""),
+    ) as run:
+        migration.apply_load(sql)
+    assert run.call_args.kwargs["input"] == sql.encode("utf-8")
+    assert run.call_args.kwargs.get("text") is not True
+
+
 def test_apply_load_raises_on_psql_failure() -> None:
     failed = mock.Mock(returncode=3, stderr="erro de SQL")
     with (

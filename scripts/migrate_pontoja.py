@@ -157,9 +157,7 @@ def transform(
         for r in data["configuracoes"]
     ]
     balances = _balances(data, employees, reference_month)
-    users, company_users = _admins(
-        data, tenant, admin_email_domain, admin_password_hash
-    )
+    users, company_users = _admins(data, tenant, admin_email_domain, admin_password_hash)
     return {
         "companies": [{"id": tenant, "name": company_name, "slug": company_slug}],
         "employees": employees,
@@ -301,8 +299,7 @@ def _settings_sql(rows: list[dict[str, Any]], tenant: str) -> list[str]:
     if not rows:
         return []
     values = ",\n".join(
-        f"({_uuid(tenant)}, {_literal(r['key'])}, {_literal(r['value'])}::jsonb)"
-        for r in rows
+        f"({_uuid(tenant)}, {_literal(r['key'])}, {_literal(r['value'])}::jsonb)" for r in rows
     )
     return [
         "INSERT INTO settings (company_id, key, value) VALUES\n"
@@ -383,12 +380,16 @@ def apply_load(sql: str) -> None:
             "-v",
             "ON_ERROR_STOP=1",
         ],
-        input=sql,
-        text=True,
+        # No Windows o default do subprocess é cp1252; sem UTF-8 explícito,
+        # caracteres acentuados do legado geram "invalid byte sequence".
+        input=sql.encode("utf-8"),
         capture_output=True,
     )
     if result.returncode != 0:
-        raise RuntimeError(f"psql falhou (transação revertida): {result.stderr}")
+        stderr = result.stderr
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode(errors="replace")
+        raise RuntimeError(f"psql falhou (transação revertida): {stderr}")
 
 
 def main() -> None:
